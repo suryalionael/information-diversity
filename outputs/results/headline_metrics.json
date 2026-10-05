@@ -1,0 +1,233 @@
+[
+  {
+    "metric": "rows_news_train",
+    "value": 51282,
+    "denominator": "rows",
+    "population": "MIND small train news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "rows_news_dev",
+    "value": 42416,
+    "denominator": "rows",
+    "population": "MIND small dev news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "rows_behaviors_train",
+    "value": 156965,
+    "denominator": "rows (impressions logs)",
+    "population": "MIND small train behaviors.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "rows_behaviors_dev",
+    "value": 73152,
+    "denominator": "rows (impressions logs)",
+    "population": "MIND small dev behaviors.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "unique_users",
+    "value": 94057,
+    "denominator": "unique user_id",
+    "population": "train \u222a dev behaviors.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "catalogue_articles",
+    "value": 65238,
+    "denominator": "unique news_id",
+    "population": "train \u222a dev news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "total_impressions",
+    "value": 8584442,
+    "denominator": "exposure records (article shown in an impression)",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "excluded 0 unjoined records",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "unique_exposed_articles",
+    "value": 22771,
+    "denominator": "unique news_id shown \u22651 time",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "total_clicks",
+    "value": 347727,
+    "denominator": "exposure records with label 1",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "overall_ctr",
+    "value": 0.04050665145154455,
+    "denominator": "clicks / impressions",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "share_of_catalogue_ever_shown",
+    "value": 0.34904503510224105,
+    "denominator": "exposed articles / catalogue articles",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "none",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "category_amplification_highest",
+    "value": "entertainment: 5.079",
+    "denominator": "exposure share / catalogue share",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "categories with \u226550 catalogue articles",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "exposure_share=0.0541, catalogue_share=0.0107, amplification_vs_pool=4.547",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "category_amplification_lowest",
+    "value": "sports: 0.370",
+    "denominator": "exposure share / catalogue share",
+    "population": "MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "categories with \u226550 catalogue articles",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "",
+    "notes": "exposure_share=0.1098, catalogue_share=0.2969, amplification_vs_pool=0.386",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_gini",
+    "value": 0.9205170479269267,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_top_1pct_share",
+    "value": 0.3467301660375829,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_top_5pct_share",
+    "value": 0.7554595860744356,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_top_10pct_share",
+    "value": 0.9117650279424102,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_bottom_50pct_share",
+    "value": 0.004176742064306568,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_bottom_90pct_share",
+    "value": 0.08823497205758976,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_frac_items_for_50pct",
+    "value": 0.019454569408458126,
+    "denominator": "impressions per article",
+    "population": "22,771 exposed articles, MIND small, train+dev behaviors.tsv, all impressions joined to union news.tsv",
+    "filters": "articles with \u22651 impression",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  },
+  {
+    "metric": "article_exposure_gini_full_catalogue",
+    "value": 0.9722568702036245,
+    "denominator": "impressions per article",
+    "population": "full catalogue incl. never-shown articles",
+    "filters": "sensitivity analysis",
+    "source": "notebooks/01_big_picture.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-05"
+  }
+]
