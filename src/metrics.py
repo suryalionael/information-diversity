@@ -121,7 +121,7 @@ def top_share(values: np.ndarray, top_fraction: float) -> dict:
     """
     x = np.sort(np.asarray(values, dtype=float))[::-1]
     n = x.size
-    k = int(np.ceil(top_fraction * n))
+    k = min(n, int(np.ceil(round(top_fraction * n, 9))))
     return {
         "top_fraction": top_fraction,
         "n_items_total": int(n),
@@ -135,7 +135,7 @@ def bottom_share(values: np.ndarray, bottom_fraction: float) -> dict:
     """Share of the total held by the bottom ``bottom_fraction`` of items (floor)."""
     x = np.sort(np.asarray(values, dtype=float))
     n = x.size
-    k = int(np.floor(bottom_fraction * n))
+    k = min(n, int(np.floor(round(bottom_fraction * n, 9))))
     return {
         "bottom_fraction": bottom_fraction,
         "n_items_total": int(n),
@@ -149,7 +149,7 @@ def items_for_share(values: np.ndarray, share: float) -> dict:
     """Smallest number (and fraction) of top items needed to reach ``share`` of the total."""
     x = np.sort(np.asarray(values, dtype=float))[::-1]
     cum = np.cumsum(x) / x.sum()
-    k = int(np.searchsorted(cum, share) + 1)
+    k = min(x.size, int(np.searchsorted(cum, share - 1e-12) + 1))
     return {"target_share": share, "n_items": k, "fraction_of_items": k / x.size}
 
 
@@ -247,3 +247,37 @@ def spearman_ci(x: np.ndarray, y: np.ndarray, n_boot: int = 200, conf: float = 0
     a = (1 - conf) / 2
     return {"rho": float(res.statistic), "p": float(res.pvalue), "ci_low": float(np.nanquantile(boots, a)),
             "ci_high": float(np.nanquantile(boots, 1 - a)), "n": int(x.size)}
+
+
+def tiebreak_rank(values, seed: int = SEED) -> np.ndarray:
+    """Ranks 0..n-1 by value with exact ties broken by a seeded random key (never by row order).
+
+    Use before quantile binning of discrete measures so tied units are split at random.
+    """
+    v = np.asarray(values, dtype=float)
+    key = np.random.default_rng(seed).random(v.size)
+    order = np.lexsort((key, v))
+    r = np.empty(v.size, dtype=int)
+    r[order] = np.arange(v.size)
+    return r
+
+
+def cluster_bootstrap_mean(values: np.ndarray, clusters: np.ndarray, n_boot: int = 1000, conf: float = 0.95,
+                           seed: int = SEED) -> tuple[float, float, float]:
+    """Mean of ``values`` with a CI that resamples whole clusters (e.g. users with several impressions).
+
+    The estimate is the plain mean over rows; each bootstrap replicate draws clusters with replacement.
+    """
+    df = pd.DataFrame({"v": np.asarray(values, dtype=float), "c": np.asarray(clusters)}).dropna()
+    if df.empty:
+        return (float("nan"),) * 3
+    g = df.groupby("c")["v"].agg(["sum", "size"])
+    sums, sizes = g["sum"].to_numpy(), g["size"].to_numpy()
+    rng = np.random.default_rng(seed)
+    boots = np.empty(n_boot)
+    for b0 in range(0, n_boot, 50):
+        m = min(50, n_boot - b0)
+        idx = rng.integers(0, sums.size, size=(m, sums.size))
+        boots[b0:b0 + m] = sums[idx].sum(axis=1) / sizes[idx].sum(axis=1)
+    a = (1 - conf) / 2
+    return float(df["v"].mean()), float(np.quantile(boots, a)), float(np.quantile(boots, 1 - a))

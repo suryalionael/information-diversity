@@ -79,10 +79,17 @@ When reporting to the team, separate **FACT** / **INTERPRETATION** / **LIMITATIO
 - **Minimum history:** 5 clicks (sensitivity 2/10/20). **Personalisation test:** exposure share of each user's
   historically dominant category vs. a permutation null (dominant categories shuffled within split-membership ×
   impressions-group × history-quintile strata; 200 permutations, seed 42).
+- **Click-conditioned logs:** every logged impression has ≥1 click and clicks favour users' interests, so history →
+  exposure tests use **shown-but-not-clicked** exposure as the primary (conservative) definition and report all-shown as
+  an upper bound. Never claim a personalisation tilt from all-shown exposure alone.
+- **Ties:** dominant categories and quantile bins break exact ties with a seeded random key, never row/column order.
+- **Effective categories:** summarise as 1 / median(Simpson), never the mean or median of 1/Simpson (unbounded for small N).
 - **Activity groups:** quartiles of historical click count (+ "no history" group). Behavioral, never demographic.
 - **Recommenders (NB03):** evaluate on dev impressions of users with ≥1 history click; diversity population = impressions
   with ≥20 candidates. Ties broken by seeded jitter (never by list position). MMR redundancy = ½·same-category +
   ½·title cosine. λ selection: walk down from 1.0, stop before the first λ with >5% relative nDCG@10 loss.
+  CIs resample users (cluster bootstrap). Amplification ratios are compared with the random ordering of the same
+  candidates (candidate-pool baseline), not only with 1×.
 - **Charts:** Source Sans 3 (vendored); orange = more exposure than expected, blue = less, grey = context.
   Final figures (NB04) and the PDF (`report/phase1/build_report.py`) read only `outputs/results/`; no typed numbers.
   Report sentences whose direction depends on results are generated conditionally.

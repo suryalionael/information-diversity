@@ -38,6 +38,12 @@ impressions. **Categories:** the 18 MIND categories (4 tiny ones are kept in cou
 | Dominant share | share of the largest category | Simple, interpretable |
 | **Alignment** | share of a user's exposure that falls in *their own* historically dominant category | Directly tests personalization of exposure |
 
+**Click-conditioned logs.** MIND only logs impressions that contain ≥1 click, and clicks favour a user's own
+interests, so *all shown* articles over-represent favourite categories even if exposure ignored history. Every
+history → exposure test is therefore run on two exposure definitions: **all shown** (upper bound) and
+**shown but not clicked** (conservative: removing clicks under-counts favourites). A tilt that survives in the
+not-clicked version cannot be produced by the logging filter. The not-clicked version is the primary result.
+
 Alignment is compared with a **permutation null**: dominant categories are shuffled among users in the same
 stratum (split membership × activity level × history-concentration group), which keeps the period and
 activity mix fixed and asks only "does *your* favourite category show up more for *you*?".
@@ -81,6 +87,7 @@ assert hist["category"].notna().all()
 all_users = pd.Index(beh["user_id"].unique(), name="user_id")
 hcounts = V.count_matrix(hist, "user_id", "category", CATS).reindex(all_users, fill_value=0)
 hp = V.profile_metrics(hcounts, K_NORM, "hist_")
+hp["hist_dominant_category"] = V.dominant_with_random_ties(hcounts, seed=SEED)   # ties: seeded random, not column order
 print(f"users: {len(all_users):,}")
 print(hp["hist_n"].describe(percentiles=[.05, .1, .25, .5, .75, .9, .95]).round(1).to_string())
 for t in (0, 1, 2, 5, 10, 20):
@@ -118,6 +125,8 @@ act = exp.groupby("user_id").agg(n_impressions=("imp_key", "nunique"), n_exposur
 membership = beh.groupby("user_id")["split"].agg(lambda s: "+".join(sorted(set(s)))).rename("splits")
 ccounts = V.count_matrix(exp[exp["clicked"] == 1], "user_id", "category", CATS).reindex(all_users, fill_value=0)
 cp = V.profile_metrics(ccounts, K_NORM, "click_")
+ncounts = ecounts - ccounts                                   # shown but NOT clicked (conservative exposure)
+npf = V.profile_metrics(ncounts, K_NORM, "nc_")[["nc_n", "nc_simpson", "nc_entropy_norm"]]
 
 # Per-impression (session-level) concentration: independent of how many impressions a user has
 icounts = V.count_matrix(exp, "imp_key", "category", CATS)
@@ -126,7 +135,7 @@ imp_user = exp.drop_duplicates("imp_key").set_index("imp_key")["user_id"]
 sess = ip.join(imp_user).groupby("user_id").agg(sess_simpson=("simpson", "mean"),
                                                 sess_n_categories=("n_categories", "mean"))
 
-users = hp.join(ep).join(act).join(membership).join(cp).join(sess)
+users = hp.join(ep).join(act).join(membership).join(cp).join(sess).join(npf)
 print(f"user table: {len(users):,} rows")
 users[["n_impressions", "n_exposures", "n_unique_articles", "n_logged_clicks", "n_days",
        "exp_n_categories", "exp_simpson", "exp_eff_categories", "exp_entropy_norm", "exp_dominant_share"]].describe().round(3)
@@ -147,7 +156,7 @@ elig["hist_conc_entropy"] = 1 - elig["hist_entropy_norm"]
 elig["exp_conc_simpson"] = elig["exp_simpson"]
 elig["exp_conc_entropy"] = 1 - elig["exp_entropy_norm"]
 
-pairs = [("hist_conc_simpson", "exp_conc_simpson"), ("hist_dominant_share", "exp_conc_simpson"),
+pairs = [("hist_conc_simpson", "nc_simpson"), ("hist_conc_simpson", "exp_conc_simpson"), ("hist_dominant_share", "nc_simpson"),
          ("hist_conc_entropy", "exp_conc_entropy"), ("hist_conc_simpson", "sess_simpson")]
 corr_rows = []
 for x, y in pairs:
@@ -158,16 +167,17 @@ corr
 """)
 code(r"""
 # Quintiles of historical concentration (equal-sized groups; non-linear patterns visible)
-elig["hist_q"] = pd.qcut(elig["hist_simpson"].rank(method="first"), 5, labels=[f"Q{i}" for i in range(1, 6)])
+elig["hist_q"] = pd.qcut(M.tiebreak_rank(elig["hist_simpson"], SEED), 5, labels=[f"Q{i}" for i in range(1, 6)])
 qrows = []
 for q, g in elig.groupby("hist_q", observed=True):
     est, lo, hi = M.bootstrap_ci(g["exp_simpson"].to_numpy())
     qrows.append({"hist_quintile": q, "n_users": len(g),
                   "hist_simpson_range": f"{g['hist_simpson'].min():.3f}–{g['hist_simpson'].max():.3f}",
-                  "hist_eff_categories_median": g["hist_eff_categories"].median(),
+                  "hist_eff_categories_at_median": V.median_eff_categories(g["hist_simpson"]),
                   "hist_dominant_share_median": g["hist_dominant_share"].median(),
                   "exp_simpson_mean": est, "exp_simpson_ci_low": lo, "exp_simpson_ci_high": hi,
-                  "exp_eff_categories_median": g["exp_eff_categories"].median(),
+                  "nc_simpson_mean": g["nc_simpson"].mean(),
+                  "exp_eff_categories_at_median": V.median_eff_categories(g["exp_simpson"]),
                   "sess_simpson_mean": g["sess_simpson"].mean(),
                   "n_impressions_median": g["n_impressions"].median()})
 quint = pd.DataFrame(qrows)
@@ -187,36 +197,40 @@ def alignment(frame: pd.DataFrame, shares_counts: pd.DataFrame, n_perm: int = 20
     cats = list(shares_counts.columns)
     E = shares_counts.loc[frame.index].to_numpy(float)
     E = E / E.sum(axis=1, keepdims=True)
+    assert np.isfinite(E).all(), "every user in frame needs ≥1 exposure under this definition"
     dom = frame["hist_dominant_category"].map({c: i for i, c in enumerate(cats)}).to_numpy()
-    qgroup = pd.qcut(frame["hist_simpson"].rank(method="first"), 5, labels=False).to_numpy()
+    qgroup = np.asarray(pd.qcut(M.tiebreak_rank(frame["hist_simpson"], SEED), 5, labels=False))
     strata = (frame["splits"] + "|" + impression_group(frame["n_impressions"]) + "|" + qgroup.astype(str)).to_numpy()
     return V.permutation_alignment(E, dom, strata, groups=qgroup, n_perm=n_perm, seed=SEED)
 
-al = alignment(elig, ecounts)
-elig["exp_share_own_dom"] = al["observed"]
-print(f"users: {al['n_users']:,}")
-print(f"observed mean share of exposure in user's own historical top category: {al['observed_mean']:.4f}")
-print(f"permutation null mean: {al['null_mean']:.4f}  (95% null interval {al['null_low']:.4f}–{al['null_high']:.4f})")
-print(f"lift = {al['lift']:.3f}   one-sided p = {al['p_one_sided']:.3g}  ({al['n_perm']} permutations)")
+elig_nc = elig[elig["nc_n"] > 0]
+print(f"eligible users with ≥1 not-clicked exposure: {len(elig_nc):,} of {len(elig):,}")
+al = alignment(elig_nc, ncounts)            # PRIMARY: shown but not clicked (conservative)
+al_all = alignment(elig_nc, ecounts)        # upper bound: all shown (inflated by click-conditioned logging)
+for name, a in [("not clicked (primary)", al), ("all shown (upper bound)", al_all)]:
+    print(f"[{name}] observed share in own top history category {a['observed_mean']:.4f} | null {a['null_mean']:.4f} "
+          f"(95% {a['null_low']:.4f}–{a['null_high']:.4f}) | lift {a['lift']:.3f} | one-sided p {a['p_one_sided']:.3g}")
 align_q = pd.DataFrame({"hist_quintile": [f"Q{i}" for i in range(1, 6)], "n_users": al["group_n"],
                         "observed_share_own_dom": al["group_observed"], "null_mean": al["group_null_mean"],
-                        "null_low": al["group_null_low"], "null_high": al["group_null_high"]})
+                        "null_low": al["group_null_low"], "null_high": al["group_null_high"],
+                        "observed_all_shown": al_all["group_observed"], "null_all_shown": al_all["group_null_mean"]})
 align_q["lift"] = align_q["observed_share_own_dom"] / align_q["null_mean"]
+align_q["lift_all_shown"] = align_q["observed_all_shown"] / align_q["null_all_shown"]
 align_q
 """)
 code(r"""
 # Category view: users whose history is dominated by category c vs. other eligible users
 crow = []
-shares = ecounts.loc[elig.index].div(ecounts.loc[elig.index].sum(axis=1), axis=0)
+shares = ncounts.loc[elig_nc.index].div(ncounts.loc[elig_nc.index].sum(axis=1), axis=0)   # not-clicked exposure
 cshares = ccounts.loc[elig.index]
 for c in MAIN_CATS:
-    fans = elig["hist_dominant_category"] == c
+    fans = elig_nc["hist_dominant_category"] == c
     if fans.sum() < 30:
         continue
     crow.append({"category": c, "n_users_dominant": int(fans.sum()), "n_users_other": int((~fans).sum()),
                  "exposure_share_dominant_users": shares.loc[fans, c].mean(),
                  "exposure_share_other_users": shares.loc[~fans, c].mean(),
-                 "hist_share_dominant_users": (hcounts.loc[elig.index[fans], c] / elig.loc[fans, "hist_n"]).mean()})
+                 "hist_share_dominant_users": (hcounts.loc[elig_nc.index[fans], c] / elig_nc.loc[fans, "hist_n"]).mean()})
 by_cat = pd.DataFrame(crow)
 by_cat["exposure_ratio"] = by_cat["exposure_share_dominant_users"] / by_cat["exposure_share_other_users"]
 by_cat.sort_values("exposure_ratio", ascending=False)
@@ -234,9 +248,13 @@ code(r"""
 grp = users.copy()
 has = grp["hist_n"] >= 1
 grp["activity_group"] = "No history"
-grp.loc[has, "activity_group"] = pd.qcut(grp.loc[has, "hist_n"], 4,
-                                         labels=["Q1 lowest", "Q2", "Q3", "Q4 highest"]).astype(str)
-order = ["No history", "Q1 lowest", "Q2", "Q3", "Q4 highest"]
+edges = np.unique(np.quantile(grp.loc[has, "hist_n"], [0, .25, .5, .75, 1]))
+names = ["Q1 lowest", "Q2", "Q3", "Q4 highest"][: len(edges) - 1]
+if len(names) >= 2:
+    names[-1] = "Q4 highest" if len(names) == 4 else names[-1]
+grp.loc[has, "activity_group"] = pd.cut(grp.loc[has, "hist_n"], edges, labels=names, include_lowest=True).astype(str)
+order = ["No history"] + names
+print("quartile edges (history clicks):", edges)
 arows = []
 for g in order:
     d = grp[grp["activity_group"] == g]
@@ -244,9 +262,10 @@ for g in order:
     arows.append({"activity_group": g, "n_users": len(d),
                   "hist_clicks_range": f"{int(d['hist_n'].min())}–{int(d['hist_n'].max())}",
                   "hist_clicks_median": d["hist_n"].median(), "n_impressions_median": d["n_impressions"].median(),
-                  "hist_eff_categories_median": d["hist_eff_categories"].median(),
+                  "hist_eff_categories_at_median": V.median_eff_categories(d["hist_simpson"]),
                   "exp_simpson_mean": est, "exp_simpson_ci_low": lo, "exp_simpson_ci_high": hi,
-                  "exp_eff_categories_median": d["exp_eff_categories"].median(),
+                  "nc_simpson_mean": d["nc_simpson"].mean(),
+                  "exp_eff_categories_at_median": V.median_eff_categories(d["exp_simpson"]),
                   "exp_n_categories_median": d["exp_n_categories"].median(),
                   "sess_simpson_mean": d["sess_simpson"].mean(),
                   "click_simpson_mean": d["click_simpson"].mean()})
@@ -268,19 +287,20 @@ Two comparisons:
 """)
 code(r"""
 from scipy.stats import wilcoxon
-same = users[users["n_logged_clicks"] >= 5]
+same = users[users["n_logged_clicks"] >= 5].dropna(subset=["click_simpson", "exp_simpson"])
 d = same["click_simpson"] - same["exp_simpson"]
 w = wilcoxon(same["click_simpson"], same["exp_simpson"])
 cve = {"population": "users with ≥5 logged clicks", "n_users": len(same),
-       "click_eff_categories_median": same["click_eff_categories"].median(),
-       "exp_eff_categories_median": same["exp_eff_categories"].median(),
+       "click_eff_categories_at_median": V.median_eff_categories(same["click_simpson"]),
+       "exp_eff_categories_at_median": V.median_eff_categories(same["exp_simpson"]),
        "share_clicks_more_concentrated": float((d > 0).mean()), "median_diff_simpson": float(d.median()),
        "wilcoxon_p": float(w.pvalue)}
-d2 = elig["hist_simpson"] - elig["exp_simpson"]
-w2 = wilcoxon(elig["hist_simpson"], elig["exp_simpson"])
-cve2 = {"population": f"users with ≥{MIN_HIST} history clicks", "n_users": len(elig),
-        "click_eff_categories_median": elig["hist_eff_categories"].median(),
-        "exp_eff_categories_median": elig["exp_eff_categories"].median(),
+e2 = elig.dropna(subset=["hist_simpson", "exp_simpson"])
+d2 = e2["hist_simpson"] - e2["exp_simpson"]
+w2 = wilcoxon(e2["hist_simpson"], e2["exp_simpson"])
+cve2 = {"population": f"users with ≥{MIN_HIST} history clicks", "n_users": len(e2),
+        "click_eff_categories_at_median": V.median_eff_categories(e2["hist_simpson"]),
+        "exp_eff_categories_at_median": V.median_eff_categories(e2["exp_simpson"]),
         "share_clicks_more_concentrated": float((d2 > 0).mean()), "median_diff_simpson": float(d2.median()),
         "wilcoxon_p": float(w2.pvalue)}
 click_vs_exp = pd.DataFrame([cve, cve2])
@@ -288,17 +308,16 @@ click_vs_exp
 """)
 code(r"""
 # Four quadrants (split at medians) and a 2-D binned histogram for the final chart (aggregate only)
-xm, ym = elig["hist_eff_categories"].median(), elig["exp_eff_categories"].median()
-quad = pd.crosstab(np.where(elig["hist_eff_categories"] <= xm, "narrow history", "broad history"),
-                   np.where(elig["exp_eff_categories"] <= ym, "narrow exposure", "broad exposure"), normalize="all")
-print(f"medians: history eff. categories {xm:.2f}, exposure eff. categories {ym:.2f}")
+# Simpson concentration is bounded in [0, 1] and defined for every eligible user (no NaN drops)
+xm, ym = e2["hist_simpson"].median(), e2["exp_simpson"].median()
+quad = pd.crosstab(np.where(e2["hist_simpson"] >= xm, "concentrated history", "broad history"),
+                   np.where(e2["exp_simpson"] >= ym, "concentrated exposure", "broad exposure"), normalize="all")
+print(f"medians: history Simpson {xm:.3f}, exposure Simpson {ym:.3f}")
 display(quad.round(3))
-XMAX = float(np.nanquantile(elig["hist_eff_categories"], .99)); YMAX = float(np.nanquantile(elig["exp_eff_categories"], .99))
-H, xe, ye = np.histogram2d(elig["hist_eff_categories"].clip(upper=XMAX), elig["exp_eff_categories"].clip(upper=YMAX),
-                           bins=[30, 30], range=[[1, XMAX], [1, YMAX]])
+H, xe, ye = np.histogram2d(e2["hist_simpson"], e2["exp_simpson"], bins=[30, 30], range=[[0, 1], [0, 1]])
 hexbin = pd.DataFrame([{"x_low": xe[i], "x_high": xe[i + 1], "y_low": ye[j], "y_high": ye[j + 1], "n_users": int(H[i, j])}
                        for i in range(H.shape[0]) for j in range(H.shape[1]) if H[i, j] > 0])
-print(f"2-D histogram bins with users: {len(hexbin)} (values above the 99th percentile clipped to the edge)")
+print(f"2-D histogram bins with users: {len(hexbin)}; users counted: {int(H.sum()):,} of {len(e2):,}")
 """)
 
 md(r"""
@@ -308,28 +327,30 @@ Each row re-runs the two core tests — (1) Spearman ρ between historical and e
 (2) alignment lift vs. the permutation null — under one alternative specification.
 """)
 code(r"""
-def core_tests(frame, counts, label, n_perm=100):
-    frame = frame.copy()
-    tot = counts.loc[frame.index].sum(axis=1)
-    frame = frame[tot > 0]
-    prof = V.profile_metrics(counts.loc[frame.index], K_NORM)
+def core_tests(frame, nc, allc, label, n_perm=100):
+    frame = frame[(nc.loc[frame.index].sum(axis=1) > 0)].copy()
+    prof = V.profile_metrics(nc.loc[frame.index], K_NORM)
     r = M.spearman_ci(frame["hist_simpson"], prof["simpson"], n_boot=100)
-    a = alignment(frame, counts, n_perm=n_perm)
+    a = alignment(frame, nc, n_perm=n_perm)
+    b_ = alignment(frame, allc, n_perm=n_perm)
     return {"specification": label, "n_users": len(frame), "rho": r["rho"], "rho_ci_low": r["ci_low"],
             "rho_ci_high": r["ci_high"], "observed_share_own_dom": a["observed_mean"], "null_mean": a["null_mean"],
-            "lift": a["lift"], "p_one_sided": a["p_one_sided"]}
+            "lift": a["lift"], "p_one_sided": a["p_one_sided"], "lift_all_shown": b_["lift"],
+            "p_all_shown": b_["p_one_sided"]}
 
-rob = [core_tests(elig, ecounts, f"primary: ≥{MIN_HIST} history clicks, train+dev exposure")]
+rob = [core_tests(elig_nc, ncounts, ecounts, f"primary: ≥{MIN_HIST} history clicks, train+dev, not-clicked exposure")]
 for t in SENS_THRESHOLDS:
     if t != MIN_HIST:
-        rob.append(core_tests(users[users["hist_n"] >= t], ecounts, f"≥{t} history clicks"))
+        rob.append(core_tests(users[(users["hist_n"] >= t) & (users["nc_n"] > 0)], ncounts, ecounts, f"≥{t} history clicks"))
 for s in SPLITS:
-    sc = V.count_matrix(exp[exp["split"] == s], "user_id", "category", CATS)
-    fr = elig[elig.index.isin(sc.index)]
-    rob.append(core_tests(fr, sc.reindex(fr.index, fill_value=0), f"exposure from {s} only"))
-for g, fr in elig.groupby(impression_group(elig["n_impressions"])):
+    sub = exp[exp["split"] == s]
+    sa = V.count_matrix(sub, "user_id", "category", CATS)
+    sn = V.count_matrix(sub[sub["clicked"] == 0], "user_id", "category", CATS).reindex(sa.index, fill_value=0)
+    fr = elig_nc[elig_nc.index.isin(sa.index)]
+    rob.append(core_tests(fr, sn.reindex(fr.index, fill_value=0), sa.reindex(fr.index, fill_value=0), f"exposure from {s} only"))
+for g, fr in elig_nc.groupby(impression_group(elig_nc["n_impressions"])):
     if len(fr) >= 200:
-        rob.append(core_tests(fr, ecounts, f"within impressions group {g}"))
+        rob.append(core_tests(fr, ncounts, ecounts, f"within impressions group {g}"))
 robust = pd.DataFrame(rob)
 alt = M.spearman_ci(elig["hist_dominant_share"], elig["exp_dominant_share"], n_boot=100)
 robust = pd.concat([robust, pd.DataFrame([{"specification": "measure: dominant share (history) vs dominant share (exposure)",
@@ -347,7 +368,7 @@ ax.fill_between(x, align_q["null_low"] * 100, align_q["null_high"] * 100, color=
 ax.plot(x, align_q["null_mean"] * 100, color=S.MUTED, lw=1.5, ls="--")
 ax.plot(x, align_q["observed_share_own_dom"] * 100, color=S.ORANGE, lw=2, marker="o", label="Observed")
 ax.set_xticks(x, ["Q1\nbroadest", "Q2", "Q3", "Q4", "Q5\nmost concentrated"])
-ax.set_xlabel("Historical click concentration (quintiles)"); ax.set_ylabel("% of exposure in user's top history category")
+ax.set_xlabel("Historical click concentration (quintiles)"); ax.set_ylabel("% of not-clicked exposure in user's top history category")
 ax.legend(loc="upper left"); S.title(ax, "Exposure vs. each user's favourite category")
 ax = axes[1]
 ax.errorbar(x, quint["exp_simpson_mean"], yerr=[quint["exp_simpson_mean"] - quint["exp_simpson_ci_low"],
@@ -359,11 +380,10 @@ fig.tight_layout(); S.save(fig, FIGURES / "02_history_vs_exposure"); plt.show()
 """)
 code(r"""
 fig, ax = plt.subplots(figsize=(6, 5))
-hb = ax.hexbin(elig["hist_eff_categories"].clip(upper=XMAX), elig["exp_eff_categories"].clip(upper=YMAX),
-               gridsize=35, cmap="Blues", mincnt=1, bins="log", linewidths=0)
-lim = max(XMAX, YMAX)
-ax.plot([1, lim], [1, lim], color=S.INK2, lw=1, ls="--"); ax.text(lim * .72, lim * .78, "equal diversity", color=S.INK2, rotation=0)
-ax.set_xlabel("Historical click diversity (effective categories)"); ax.set_ylabel("Logged exposure diversity (effective categories)")
+hb = ax.hexbin(e2["hist_simpson"], e2["exp_simpson"], gridsize=35, cmap="Blues", mincnt=1, bins="log", linewidths=0,
+               extent=(0, 1, 0, 1))
+ax.plot([0, 1], [0, 1], color=S.INK2, lw=1, ls="--"); ax.text(.62, .70, "equal concentration", color=S.INK2)
+ax.set_xlabel("Past clicks: Simpson concentration"); ax.set_ylabel("Logged exposure: Simpson concentration")
 fig.colorbar(hb, ax=ax, label="users (log scale)"); S.title(ax, "Clicks vs. exposure diversity per user")
 S.save(fig, FIGURES / "02_click_vs_exposure"); plt.show()
 """)
@@ -383,7 +403,7 @@ S.save(fig, FIGURES / "02_activity_groups"); plt.show()
 md("## 13. Save results (with provenance)")
 code(r"""
 reg = M.HeadlineRegistry("notebooks/02_narrowing.ipynb")
-POP = f"users with ≥{MIN_HIST} pre-period history clicks, exposure = all logged impressions (train+dev)"
+POP = f"users with ≥{MIN_HIST} pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)"
 corr.to_csv(RESULTS / "narrowing_correlations.csv", index=False)
 quint.to_csv(RESULTS / "narrowing_hist_quintiles.csv", index=False)
 align_q.to_csv(RESULTS / "narrowing_alignment_by_quintile.csv", index=False)
@@ -395,7 +415,7 @@ quad.to_csv(RESULTS / "narrowing_quadrants.csv")
 hexbin.to_csv(RESULTS / "narrowing_hist2d.csv", index=False)
 robust.to_csv(RESULTS / "narrowing_robustness.csv", index=False)
 
-prim = corr.iloc[0]
+prim = corr.iloc[0]   # history Simpson vs NOT-CLICKED exposure Simpson
 reg.add("narrowing_users_total", len(users), "users", "train ∪ dev behaviors.tsv")
 reg.add("narrowing_users_eligible", len(elig), "users", POP, f"hist_n ≥ {MIN_HIST}")
 reg.add("narrowing_rho_hist_vs_exposure_simpson", prim["rho"], "Spearman rank correlation", POP,
@@ -404,10 +424,13 @@ reg.add("alignment_observed_share_own_dom", al["observed_mean"], "mean over user
 reg.add("alignment_null_share_own_dom", al["null_mean"], "same, with top categories shuffled within strata", POP,
         "200 permutations within split × impressions-group × history-quintile", unit="proportion")
 reg.add("alignment_lift", al["lift"], "observed / null", POP, notes=f"one-sided permutation p={al['p_one_sided']:.3g}")
+reg.add("alignment_p", al["p_one_sided"], "one-sided permutation p-value (null ≥ observed)", POP, unit="p-value")
+reg.add("alignment_lift_all_shown", al_all["lift"], "observed / null, all shown articles (upper bound)",
+        POP.replace("shown-but-not-clicked articles", "all shown articles"), notes=f"p={al_all['p_one_sided']:.3g}; inflated by click-conditioned logging")
 for _, r in align_q.iterrows():
     reg.add(f"alignment_lift_{r['hist_quintile']}", r["lift"], "observed / null", POP, f"history-concentration quintile {r['hist_quintile']}")
-reg.add("exp_eff_categories_median", elig["exp_eff_categories"].median(), "1 / unbiased Simpson of exposure categories", POP)
-reg.add("hist_eff_categories_median", elig["hist_eff_categories"].median(), "1 / unbiased Simpson of history categories", POP)
+reg.add("exp_eff_categories_median", cve2["exp_eff_categories_at_median"], "1 / median unbiased Simpson of all-shown exposure", POP)
+reg.add("hist_eff_categories_median", cve2["click_eff_categories_at_median"], "1 / median unbiased Simpson of history clicks", POP)
 reg.add("share_users_history_more_concentrated_than_exposure", cve2["share_clicks_more_concentrated"],
         "users with hist_simpson > exp_simpson / eligible users", POP, unit="proportion")
 reg.add("share_users_logged_clicks_more_concentrated_than_exposure", cve["share_clicks_more_concentrated"],
@@ -422,11 +445,11 @@ md("## 14. Auto-generated FACT summary")
 code(r"""
 facts = [
     f"{len(elig):,} of {len(users):,} users have ≥{MIN_HIST} pre-period history clicks.",
-    f"Spearman ρ(historical Simpson, exposure Simpson) = {prim['rho']:.3f} (95% CI {prim['ci_low']:.3f}–{prim['ci_high']:.3f}).",
-    f"Users' own top history category takes {al['observed_mean']:.1%} of their logged exposure vs {al['null_mean']:.1%} "
-    f"under the permutation null (lift {al['lift']:.2f}, p={al['p_one_sided']:.3g}).",
+    f"Spearman ρ(historical Simpson, not-clicked exposure Simpson) = {prim['rho']:.3f} (95% CI {prim['ci_low']:.3f}–{prim['ci_high']:.3f}).",
+    f"Users' own top history category takes {al['observed_mean']:.1%} of their not-clicked exposure vs {al['null_mean']:.1%} "
+    f"under the permutation null (lift {al['lift']:.2f}, p={al['p_one_sided']:.3g}); all shown: lift {al_all['lift']:.2f}.",
     "Lift by history-concentration quintile: " + ", ".join(f"{q} {l:.2f}" for q, l in zip(align_q['hist_quintile'], align_q['lift'])) + ".",
-    f"Median effective categories: history {elig['hist_eff_categories'].median():.2f}, exposure {elig['exp_eff_categories'].median():.2f}.",
+    f"Effective categories at the median: history {cve2['click_eff_categories_at_median']:.2f}, exposure {cve2['exp_eff_categories_at_median']:.2f}.",
     f"{cve2['share_clicks_more_concentrated']:.1%} of eligible users have history more concentrated than their exposure; "
     f"{cve['share_clicks_more_concentrated']:.1%} of users with ≥5 logged clicks clicked more narrowly than they were shown.",
     "Activity groups (exposure Simpson mean): " + ", ".join(f"{g} {v:.3f}" for g, v in zip(activity['activity_group'], activity['exp_simpson_mean'])) + ".",
@@ -449,7 +472,9 @@ md(r"""
   content regardless.
 - **Exposure ≠ algorithm.** Logged impressions reflect MSN's whole ecosystem (editorial modules, layout, recommendation,
   navigation). The alignment test shows whether exposure is *tilted toward* past interests, not which component does it.
-- **Click-conditioned logs.** Every logged impression contains ≥1 click, so logged sessions are engaged sessions.
+- **Click-conditioned logs.** Every logged impression contains ≥1 click, and clicks favour users' interests, so all-shown
+  exposure over-represents favourite categories by construction. Tests therefore use not-clicked exposure (conservative
+  lower bound) as primary and report all-shown as an upper bound.
 - **Short window.** One week of exposure; per-user exposure counts are small for light users (handled with
   an unbiased concentration measure, a minimum-history threshold, session-level measures and robustness checks).
 - **Category granularity.** 18 broad categories; narrowing *within* a category (e.g. one team, one politician) is

@@ -203,7 +203,7 @@ if have("narrowing_alignment_by_quintile.csv"):
     ax.set_xticks(x, ["Broadest\nhistory", "", "", "", "Most\nconcentrated"])
     ax.set_xlim(-0.3, len(q) + 0.6)
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax.set_ylabel("Share of exposure in the user's\nfavourite (most-clicked) category")
+    ax.set_ylabel("Share of shown-but-not-clicked articles\nin the user's favourite category")
     ax.set_xlabel("Users grouped by how concentrated\ntheir past clicks were (quintiles)")
     S.save(fig, FIG / "fig5_alignment"); plt.show()
 """)
@@ -217,7 +217,7 @@ if have("narrowing_alignment_by_category.csv"):
     ax.scatter(c["exposure_share_dominant_users"] * 100, y, color=S.ORANGE, s=26, zorder=3, label="users who mostly clicked it before")
     ax.set_yticks(y, [LBL(v) for v in c["category"]]); ax.grid(axis="y", visible=False)
     ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
-    ax.set_xlabel("Share of logged exposure in that category")
+    ax.set_xlabel("Share of shown-but-not-clicked articles\nin that category")
     ax.legend(loc="lower left", bbox_to_anchor=(-0.02, 1.0), ncol=2, fontsize=8.5, handletextpad=0.2, columnspacing=1.0)
     ax.spines["left"].set_visible(False)
     S.save(fig, FIG / "fig5b_alignment_by_category"); plt.show()
@@ -226,13 +226,12 @@ code(r"""
 if have("narrowing_hist2d.csv"):
     h = pd.read_csv(RES / "narrowing_hist2d.csv")
     fig, ax = plt.subplots(figsize=(HALF, 3.1))
-    sc = ax.scatter((h["x_low"] + h["x_high"]) / 2, (h["y_low"] + h["y_high"]) / 2, s=np.sqrt(h["n_users"]) * 4,
-                    color=S.BLUE, alpha=0.45, lw=0)
-    lim = max(h["x_high"].max(), h["y_high"].max())
-    ax.plot([1, lim], [1, lim], color=S.INK2, lw=1, ls="--")
-    ax.text(lim * 0.97, lim * 0.93, "equal", color=S.INK2, fontsize=8.5, ha="right")
-    ax.set_xlim(1, lim); ax.set_ylim(1, lim)
-    ax.set_xlabel("Past clicks: effective number of categories"); ax.set_ylabel("Shown: effective number of categories")
+    ax.scatter((h["x_low"] + h["x_high"]) / 2, (h["y_low"] + h["y_high"]) / 2, s=np.sqrt(h["n_users"]) * 4,
+               color=S.BLUE, alpha=0.45, lw=0)
+    ax.plot([0, 1], [0, 1], color=S.INK2, lw=1, ls="--")
+    ax.text(0.97, 0.91, "equal", color=S.INK2, fontsize=8.5, ha="right")
+    ax.set_xlim(0, 1); ax.set_ylim(0, 1)
+    ax.set_xlabel("Past clicks: concentration (Simpson)"); ax.set_ylabel("Shown: concentration (Simpson)")
     S.save(fig, FIG / "fig6_click_vs_exposure"); plt.show()
 """)
 code(r"""
@@ -282,6 +281,9 @@ if have("recommender_metrics.csv"):
     colors = [S.ORANGE if v > 1 else S.BLUE for v in bb["amp_vs_history_mean"]]
     ax.bar(np.arange(len(bb)), bb["amp_vs_history_mean"], color=colors, width=0.6)
     ax.axhline(1, color=S.INK2, lw=1)
+    rv = sm[(sm["lam"] == 1.0) & (sm["model"] == "random")]["amp_vs_history_mean"].iat[0]
+    ax.axhline(rv, color=S.MUTED, lw=1.2, ls="--")
+    ax.text(len(bb) - 0.5, rv, f"random order {rv:.2f}×", ha="right", va="bottom", fontsize=8.5, color=S.MUTED)
     for i, v in enumerate(bb["amp_vs_history_mean"]):
         ax.text(i, v + 0.03, f"{v:.2f}×", ha="center", va="bottom", fontsize=9.5)
     ax.set_xticks(np.arange(len(bb)), [names[m] for m in bb.index], fontsize=8.5)

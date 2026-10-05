@@ -100,10 +100,11 @@ def profile_metrics(counts: pd.DataFrame, k_norm: int, prefix: str = "") -> pd.D
             "n": n.astype(int),
             "n_categories": (c > 0).sum(axis=1),
             "entropy": np.where(n > 0, ent, np.nan),
-            "entropy_norm": np.where(n > 0, ent / np.log(k_norm), np.nan),
+            "entropy_norm": np.where(n > 0, ent / np.log(k_norm), np.nan) if k_norm > 1 else np.nan,
             "hhi": np.where(n > 0, (p**2).sum(axis=1), np.nan),
             "simpson": simpson,
-            "eff_categories": np.where(simpson > 0, 1.0 / simpson, np.nan),
+            # 1/S is unbounded and noisy for small N (S = 0 -> inf); summarise it as 1 / median(S), never mean(1/S)
+            "eff_categories": np.where(n >= 2, 1.0 / np.where(simpson > 0, simpson, np.nan), np.nan),
             "dominant_category": np.asarray(counts.columns)[c.argmax(axis=1)],
             "dominant_share": np.where(n > 0, c.max(axis=1) / n, np.nan),
         }, index=counts.index)
@@ -145,11 +146,13 @@ def permutation_alignment(shares: np.ndarray, dom: np.ndarray, strata: np.ndarra
     rows = np.arange(n)
     obs = shares[rows, dom]
     rng = np.random.default_rng(seed)
-    strata_idx = [np.flatnonzero(strata == s) for s in pd.unique(strata)]
+    codes, _ = pd.factorize(pd.Series(strata).astype(str))          # NaN-safe stratum labels
+    strata_idx = [np.flatnonzero(codes == s) for s in np.unique(codes)]
     if groups is not None:
         groups = np.asarray(groups, dtype=int)
-        g_n = np.bincount(groups)
-        g_obs = np.bincount(groups, weights=obs) / g_n
+        g_n = np.bincount(groups, minlength=groups.max() + 1)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            g_obs = np.bincount(groups, weights=obs, minlength=g_n.size) / g_n
         g_null = np.empty((n_perm, g_n.size))
     null = np.empty(n_perm)
     dom_p = dom.copy()
@@ -159,7 +162,8 @@ def permutation_alignment(shares: np.ndarray, dom: np.ndarray, strata: np.ndarra
         vals = shares[rows, dom_p]
         null[b] = vals.mean()
         if groups is not None:
-            g_null[b] = np.bincount(groups, weights=vals, minlength=g_n.size) / g_n
+            with np.errstate(invalid="ignore", divide="ignore"):
+                g_null[b] = np.bincount(groups, weights=vals, minlength=g_n.size) / g_n
     out = {
         "observed": obs, "observed_mean": float(obs.mean()), "null_mean": float(null.mean()),
         "null_low": float(np.quantile(null, 0.025)), "null_high": float(np.quantile(null, 0.975)),
@@ -171,4 +175,22 @@ def permutation_alignment(shares: np.ndarray, dom: np.ndarray, strata: np.ndarra
         out.update({"group_observed": g_obs, "group_null_mean": g_null.mean(axis=0),
                     "group_null_low": np.quantile(g_null, 0.025, axis=0),
                     "group_null_high": np.quantile(g_null, 0.975, axis=0), "group_n": g_n})
+    return out
+
+
+def median_eff_categories(simpson: np.ndarray | pd.Series) -> float:
+    """Effective number of categories at the median: 1 / median(Simpson) (robust to small-N noise)."""
+    x = np.asarray(simpson, dtype=float)
+    x = x[~np.isnan(x)]
+    m = float(np.median(x)) if x.size else float("nan")
+    return 1.0 / m if m > 0 else float("inf")
+
+
+def dominant_with_random_ties(counts: pd.DataFrame, seed: int = 42) -> pd.Series:
+    """Dominant category per row, with exact ties broken by a seeded random draw (not column order)."""
+    c = counts.to_numpy(dtype=float)
+    jitter = np.random.default_rng(seed).random(c.shape) * 1e-3     # < 1 click: only resolves exact ties
+    idx = np.argmax(c + jitter, axis=1)
+    out = pd.Series(np.asarray(counts.columns)[idx], index=counts.index)
+    out[c.sum(axis=1) == 0] = None
     return out

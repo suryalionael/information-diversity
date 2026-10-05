@@ -86,6 +86,10 @@ slot_seen = dev_exp["news_id"].isin(train_exp.loc[train_exp["clicked"] == 1, "ne
 print(f"dev candidate articles with ≥1 train click: {seen.mean():.1%} of {len(dev_cands):,} articles; "
       f"{slot_seen:.1%} of dev candidate slots")
 print(f"TF-IDF vocabulary: {ctx.X.shape[1]:,} terms over {ctx.X.shape[0]:,} titles")
+zero_vec = np.asarray(ctx.X.getnnz(axis=1) == 0)
+dev_idx = np.array([ctx.index[n] for n in dev_cands])
+print(f"titles with an empty TF-IDF vector: {zero_vec.mean():.2%} of catalogue, {zero_vec[dev_idx].mean():.2%} of dev candidates "
+      "(they look maximally dissimilar in ILD; MMR redundancy also uses category, which limits the effect)")
 """)
 code(r"""
 hist_dev = D.explode_history(beh["dev"], dedupe_per_user=True)
@@ -145,7 +149,7 @@ code(r"""
 def summarise(df: pd.DataFrame, recommended: dict | None, pool_ids: np.ndarray | None) -> pd.DataFrame:
     rows = []
     for (m, lam), g in df.groupby(["model", "lam"], sort=False):
-        nd, nd_lo, nd_hi = M.bootstrap_ci(g["ndcg10"].to_numpy(), n_boot=500)
+        nd, nd_lo, nd_hi = M.cluster_bootstrap_mean(g["ndcg10"], g["user_id"], n_boot=500)   # resample users
         amp = g["amp_vs_history"].dropna()
         row = {"model": m, "lam": lam, "n_impressions": len(g), "ndcg10": nd, "ndcg10_ci_low": nd_lo, "ndcg10_ci_high": nd_hi,
                "auc": g["auc"].mean(), "mrr": g["mrr"].mean(), "recall10": g["recall10"].mean(),
@@ -187,10 +191,10 @@ code(r"""
 # A-priori decision rule: walk λ down from 1.0 and keep the last λ before the first one whose nDCG@10 loss
 # exceeds NDCG_TOLERANCE (conservative: never skips past a violation). Then a paired bootstrap over impressions.
 def paired_change(base_name: str, lam: float, col: str) -> tuple[float, float, float]:
-    a = rec_div[(rec_div["model"] == base_name) & (rec_div["lam"] == 1.0)].set_index("imp_key")[col]
-    b_ = rec_div[(rec_div["model"] == f"{base_name}+MMR") & (rec_div["lam"] == lam)].set_index("imp_key")[col]
-    d = (b_ - a.reindex(b_.index)).to_numpy()
-    return M.bootstrap_ci(d, n_boot=1000)
+    a = rec_div[(rec_div["model"] == base_name) & (rec_div["lam"] == 1.0)].set_index("imp_key")
+    b_ = rec_div[(rec_div["model"] == f"{base_name}+MMR") & (rec_div["lam"] == lam)].set_index("imp_key")
+    d = b_[col] - a[col].reindex(b_.index)
+    return M.cluster_bootstrap_mean(d, b_["user_id"], n_boot=1000)          # paired, resampling users
 
 picks = []
 for bname, g in frontier.groupby("base"):
@@ -239,6 +243,7 @@ fig, ax = plt.subplots(figsize=(7, 3.6))
 bb = base.drop(index="random").sort_values("amp_vs_history_mean")
 ax.barh(bb.index, bb["amp_vs_history_mean"], color=[colors[m] for m in bb.index], height=0.5)
 ax.axvline(1, color=S.INK2, lw=1, ls="--")
+ax.axvline(base.loc["random", "amp_vs_history_mean"], color=S.MUTED, lw=1, ls=":")
 ax.set_xlabel("Amplification ratio: dominant-category share in top 10 ÷ share in user history")
 S.title(ax, "Do simulated recommenders amplify users' favourite category?")
 S.save(fig, FIGURES / "03_amplification"); plt.show()
@@ -253,14 +258,15 @@ picks.to_csv(RESULTS / "recommender_mmr_selected.csv", index=False)
 pd.DataFrame([{"dev_impressions": len(imp_size), "relevance_population": len(pop_all), "diversity_population": len(pop_div),
                "min_candidates": MIN_CANDIDATES, "dev_candidate_articles": len(dev_cands),
                "dev_candidates_with_train_clicks": float(seen.mean()), "dev_slots_with_train_clicks": float(slot_seen),
-               "tfidf_terms": ctx.X.shape[1], "head_articles": int(head.sum())}]).to_csv(RESULTS / "recommender_setup.csv", index=False)
+               "tfidf_terms": ctx.X.shape[1], "head_articles": int(head.sum()),
+               "dev_candidates_empty_tfidf": float(zero_vec[dev_idx].mean())}]).to_csv(RESULTS / "recommender_setup.csv", index=False)
 
 reg = M.HeadlineRegistry("notebooks/03_relevance_diversity.ipynb")
 POPD = f"dev impressions with ≥{MIN_CANDIDATES} candidates, users with ≥1 history click (simulated strategies)"
 for m, r in base.iterrows():
     reg.add(f"rec_{m}_ndcg10", r["ndcg10"], "mean nDCG@10 over impressions", POPD, notes=f"95% CI {r['ndcg10_ci_low']:.4f}–{r['ndcg10_ci_high']:.4f}")
     reg.add(f"rec_{m}_distinct_categories", r["distinct_categories"], "mean distinct categories in top 10", POPD)
-    if m != "random":
+    if True:   # random included: it is the baseline for amplification (candidate-pool composition)
         reg.add(f"rec_{m}_amp_vs_history", r["amp_vs_history_mean"], "mean over lists of rec dominant share / history dominant share",
                 POPD, f"users with ≥{MIN_HIST_AMP} history clicks")
 for _, r in picks.iterrows():
@@ -306,6 +312,10 @@ md(r"""
   state-of-the-art neural recommenders; the size of the trade-off may differ for stronger models.
 - **Cold content.** Many dev candidates were published after the train period and have no train clicks, which
   handicaps the popularity strategy (quantified above).
+- **Uncertainty.** Confidence intervals resample *users* (several dev impressions per user); the λ rule uses point
+  estimates, so the paired CI for the selected λ is reported alongside.
+- **Amplification baseline.** The ratio is compared with the random ordering of the same candidates, which reflects
+  the composition of MSN's candidate lists rather than personalisation.
 - **Diversity = categories and title words.** Other notions (viewpoints, sources, geography of coverage) are not measured.
 - **Not MSN.** Nothing here describes how MSN's production recommender behaves.
 """)

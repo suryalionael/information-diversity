@@ -198,12 +198,16 @@ def score_category(cand: np.ndarray, ctx: Context, cat_counts: np.ndarray, prior
                    alpha: float = 1.0, **_) -> np.ndarray:
     """Smoothed share of the user's history in the candidate's category, popularity as tie-break.
 
-    p(c | u) = (n_uc + alpha * prior_c) / (n_u + alpha). The popularity term is scaled to
-    < 1e-6 so it only orders articles within the same category.
+    p(c | u) = (n_uc + alpha * prior_c) / (n_u + alpha). The popularity term is scaled below half of
+    the smallest gap between distinct p values in this list, so it only orders articles *within* a
+    category and can never override the category preference.
     """
     p = (cat_counts + alpha * prior) / (cat_counts.sum() + alpha)
+    pc = p[ctx.cat[cand]]
+    u = np.unique(pc)
+    gap = np.diff(u).min() if u.size > 1 else 1.0
     pop = np.log1p(ctx.pop[cand])
-    return p[ctx.cat[cand]] + 1e-6 * pop / (pop.max() + 1.0)
+    return pc + 0.49 * gap * pop / (pop.max() + 1.0)
 
 
 def score_random(cand: np.ndarray, ctx: Context, rng: np.random.Generator, **_) -> np.ndarray:
