@@ -199,3 +199,45 @@ class HeadlineRegistry:
             existing = [r for r in json.loads(path.read_text()) if r.get("source") != self.source]
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(existing + [asdict(r) for r in self.records], indent=2))
+
+
+# --------------------------------------------------------------------------- #
+# Uncertainty helpers (deterministic: seeded)
+# --------------------------------------------------------------------------- #
+SEED = 42
+
+
+def bootstrap_ci(values: np.ndarray, stat=np.mean, n_boot: int = 1000, conf: float = 0.95,
+                 seed: int = SEED) -> tuple[float, float, float]:
+    """(estimate, low, high) percentile bootstrap CI of ``stat`` over ``values`` (NaNs dropped)."""
+    x = np.asarray(values, dtype=float)
+    x = x[~np.isnan(x)]
+    if x.size == 0:
+        return (float("nan"),) * 3
+    rng = np.random.default_rng(seed)
+    idx = rng.integers(0, x.size, size=(n_boot, x.size))
+    boots = np.apply_along_axis(stat, 1, x[idx]) if stat is not np.mean else x[idx].mean(axis=1)
+    a = (1 - conf) / 2
+    return float(stat(x)), float(np.quantile(boots, a)), float(np.quantile(boots, 1 - a))
+
+
+def spearman_ci(x: np.ndarray, y: np.ndarray, n_boot: int = 200, conf: float = 0.95,
+                seed: int = SEED) -> dict:
+    """Spearman rho with p-value and a percentile bootstrap CI (pairs with NaN dropped)."""
+    x = np.asarray(x, dtype=float); y = np.asarray(y, dtype=float)
+    ok = ~(np.isnan(x) | np.isnan(y))
+    x, y = x[ok], y[ok]
+    if x.size < 3:
+        return {"rho": float("nan"), "p": float("nan"), "ci_low": float("nan"),
+                "ci_high": float("nan"), "n": int(x.size)}
+    res = stats.spearmanr(x, y)
+    # rank once, then bootstrap Pearson-on-ranks (equivalent up to tie handling within resamples)
+    rx, ry = stats.rankdata(x), stats.rankdata(y)
+    rng = np.random.default_rng(seed)
+    boots = np.empty(n_boot)
+    for b in range(n_boot):
+        i = rng.integers(0, x.size, x.size)
+        boots[b] = np.corrcoef(rx[i], ry[i])[0, 1]
+    a = (1 - conf) / 2
+    return {"rho": float(res.statistic), "p": float(res.pvalue), "ci_low": float(np.nanquantile(boots, a)),
+            "ci_high": float(np.nanquantile(boots, 1 - a)), "n": int(x.size)}

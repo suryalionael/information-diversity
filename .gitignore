@@ -1,6 +1,6 @@
 # MIND dataset — never commit (license + size). See data/README.md.
-data/raw/
-data/interim/
+data/*
+!data/README.md
 *.zip
 *.tsv
 *.vec
@@ -18,3 +18,8 @@ venv/
 .DS_Store
 .vscode/
 .idea/
+
+# Secrets
+.env
+*.key
+*token*

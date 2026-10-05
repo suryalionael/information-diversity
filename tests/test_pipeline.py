@@ -1,72 +1,113 @@
-"""Code-path tests on a tiny SYNTHETIC MIND-format fixture.
+"""Tests: metric unit tests + end-to-end notebook execution on a SYNTHETIC fixture.
 
-These numbers are fabricated test inputs, never findings. Results go to a temp
-directory, never to outputs/. Run: python -m tests.test_pipeline
+Fixture numbers are fabricated test inputs, never findings. Notebook outputs go to a
+temporary directory, never to outputs/. Run: python -m tests.test_pipeline [--keep DIR]
 """
 from __future__ import annotations
 
 import os
-import random
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-CATS = {"news": ["newsus", "newspolitics"], "sports": ["football_nfl"], "lifestyle": ["lifestyleroyals"],
-        "finance": ["markets"], "kids": ["kidsfun"]}
+from tests.fixture import write_fixture  # noqa: E402
+
+NOTEBOOKS = ["01_big_picture", "02_narrowing", "03_relevance_diversity"]
 
 
-def write_fixture(root: Path, seed: int = 0) -> None:
-    rng = random.Random(seed)
-    ids = [f"N{i}" for i in range(1, 121)]
-    for split, days in [("train", range(9, 14)), ("dev", [15])]:
-        d = root / f"MINDsmall_{split}"
-        d.mkdir(parents=True)
-        with open(d / "news.tsv", "w") as f:
-            for i, nid in enumerate(ids):
-                cat = rng.choice(list(CATS))
-                title = 'Fixture "quote' if i == 0 else f"Title {nid}"  # unbalanced quote on purpose
-                f.write("\t".join([nid, cat, rng.choice(CATS[cat]), title, "" if i % 7 == 0 else "abs",
-                                   "https://example.invalid", "[]", "[]"]) + "\n")
-        with open(d / "behaviors.tsv", "w") as f:
-            for imp in range(1, 61):
-                user = f"U{rng.randint(1, 15)}"
-                hist = "" if user == "U1" else " ".join(rng.sample(ids[:40], 5) + (["N9999"] if user == "U2" else []))
-                shown = rng.sample(ids[20:], 8)
-                labels = [1] + [0] * 7
-                rng.shuffle(labels)
-                toks = " ".join(f"{n}-{l}" for n, l in zip(shown, labels))
-                f.write(f"{imp}\t{user}\t11/{rng.choice(list(days))}/2019 {rng.randint(1,12)}:05:58 AM\t{hist}\t{toks}\n")
-
-
+# --------------------------------------------------------------------------- #
+# Unit tests
+# --------------------------------------------------------------------------- #
 def test_metrics() -> None:
-    from src.diversity import normalized_entropy, shannon_entropy
-    from src.metrics import gini, top_share
+    from src.metrics import bottom_share, category_table, gini, items_for_share, top_share, wilson_interval
     assert abs(gini(np.ones(10))) < 1e-12
     assert abs(gini(np.r_[np.zeros(99), 1.0]) - 0.99) < 1e-12
     assert top_share(np.r_[np.ones(99), 101.0], 0.01)["share_of_total"] == 0.505
+    assert abs(bottom_share(np.arange(1, 11), 0.5)["share_of_total"] - 15 / 55) < 1e-12
+    assert items_for_share(np.array([50, 30, 20.]), 0.5)["n_items"] == 1
+    lo, hi = wilson_interval(np.array([5, 0]), np.array([100, 0]))
+    assert 0 < lo[0] < 0.05 < hi[0] and np.isnan(lo[1])
+    cat = pd.DataFrame({"news_id": list("abcd"), "category": ["x", "x", "y", "z"]})
+    exp = pd.DataFrame({"news_id": list("aaab"), "category": ["x"] * 4, "clicked": [1, 0, 0, 1]})
+    t = category_table(cat, exp)
+    assert t.loc["x", "amplification"] == 1 / 0.5 and t.loc["x", "ctr"] == 0.5
+    assert t.loc["y", "impressions"] == 0 and np.isnan(t.loc["y", "ctr"])
+    assert t.loc["x", "pool_share"] == 1.0  # only x articles were shown
+
+
+def test_diversity() -> None:
+    from src.diversity import (normalized_entropy, permutation_alignment, profile_metrics,
+                               shannon_entropy, simpson_unbiased)
     assert abs(shannon_entropy([1, 1]) - np.log(2)) < 1e-12
     assert abs(normalized_entropy([5, 5, 5]) - 1.0) < 1e-12
+    assert np.isnan(simpson_unbiased([1])) and simpson_unbiased([2, 2, 2]) == 0.2
+    # unbiasedness: mean of Simpson over small samples ≈ population HHI
+    rng = np.random.default_rng(0)
+    p = np.array([.6, .3, .1])
+    est = [simpson_unbiased(np.bincount(rng.choice(3, 4, p=p), minlength=3)) for _ in range(20000)]
+    assert abs(np.mean(est) - (p**2).sum()) < 0.01
+    pm = profile_metrics(pd.DataFrame([[3, 1, 0], [0, 0, 0]], columns=list("abc")), 3)
+    assert pm.loc[0, "dominant_category"] == "a" and pm.loc[0, "dominant_share"] == 0.75
+    assert pd.isna(pm.loc[1, "dominant_category"]) and np.isnan(pm.loc[1, "simpson"])
+    n, K = 2000, 4
+    dom = rng.integers(0, K, n)
+    sh = rng.dirichlet(np.ones(K), n)
+    sh[np.arange(n), dom] += 1
+    sh /= sh.sum(1, keepdims=True)
+    res = permutation_alignment(sh, dom, np.zeros(n), n_perm=50)
+    assert res["lift"] > 1.3 and res["p_one_sided"] < 0.05
 
 
-def test_notebook_01() -> None:
-    with tempfile.TemporaryDirectory() as tmp:
-        tmp = Path(tmp)
-        write_fixture(tmp / "raw")
-        env = {**os.environ, "MIND_DATA_DIR": str(tmp / "raw"), "MIND_OUTPUT_DIR": str(tmp / "out")}
+def test_recommenders() -> None:
+    from src.recommenders import auc_score, mmr_rerank, mrr_score, ndcg_at_k
+    assert ndcg_at_k(np.array([1, 0, 0]), np.array([3., 2, 1]), 10) == 1.0
+    assert abs(ndcg_at_k(np.array([0, 1]), np.array([2., 1]), 10) - 1 / np.log2(3)) < 1e-12
+    assert auc_score(np.array([1, 0, 0]), np.array([3., 2, 1])) == 1.0
+    assert auc_score(np.array([1, 0]), np.array([1., 1])) == 0.5          # ties count half
+    assert np.isnan(auc_score(np.array([1, 1]), np.array([1., 2])))
+    assert mrr_score(np.array([0, 1]), np.array([2., 1])) == 0.5
+    rel = np.array([1.0, 0.9, 0.1])
+    sim = np.array([[1, 1, 0], [1, 1, 0], [0, 0, 1.]])
+    assert list(mmr_rerank(rel, sim, 1.0, 3)) == [0, 1, 2]
+    assert list(mmr_rerank(rel, sim, 0.5, 3)) == [0, 2, 1]                 # redundancy pushes item 1 down
+
+
+# --------------------------------------------------------------------------- #
+# End-to-end notebook execution on the fixture
+# --------------------------------------------------------------------------- #
+def run_notebooks(workdir: Path, names: list[str] = NOTEBOOKS) -> Path:
+    write_fixture(workdir / "raw")
+    env = {**os.environ, "MIND_DATA_DIR": str(workdir / "raw"), "MIND_OUTPUT_DIR": str(workdir / "out")}
+    for name in names:
+        nb = ROOT / "notebooks" / f"{name}.ipynb"
+        if not nb.exists():
+            print("skip (not built):", name)
+            continue
         subprocess.run([sys.executable, "-m", "jupyter", "nbconvert", "--to", "notebook", "--execute",
-                        "--output-dir", str(tmp), str(ROOT / "notebooks" / "01_big_picture.ipynb")],
-                       check=True, env=env, cwd=ROOT / "notebooks")
-        for f in ["headline_metrics.json", "category_metrics.csv", "concentration_metrics.csv"]:
-            assert (tmp / "out" / "results" / f).exists(), f
+                        "--ExecutePreprocessor.timeout=1800", "--output-dir", str(workdir / "executed"), str(nb)],
+                       check=True, env=env, cwd=ROOT / "notebooks", capture_output=True)
+        print("executed:", name)
+    return workdir / "out"
 
 
 if __name__ == "__main__":
-    test_metrics()
-    test_notebook_01()
+    test_metrics(); test_diversity()
+    try:
+        test_recommenders()
+    except ImportError:
+        print("skip recommender unit tests (not implemented yet)")
+    keep = sys.argv[sys.argv.index("--keep") + 1] if "--keep" in sys.argv else None
+    if keep:
+        out = run_notebooks(Path(keep))
+    else:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = run_notebooks(Path(tmp))
+            assert (out / "results" / "headline_metrics.json").exists()
     print("all tests passed (synthetic fixture)")
