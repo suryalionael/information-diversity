@@ -256,6 +256,16 @@ cols = ["n_articles", "catalogue_share", "n_exposed_articles", "pool_share", "im
 cat_tbl[cols]
 """)
 code(r"""
+# Does exposure track engagement at category level? (categories with ≥50 catalogue articles)
+from scipy.stats import spearmanr
+big = cat_tbl[cat_tbl["n_articles"] >= 50]
+r_ctr = spearmanr(big["amplification"], big["ctr"])
+r_clk = spearmanr(big["exposure_share"], big["click_share"])
+print(f"n categories = {len(big)}")
+print(f"Spearman ρ(amplification, CTR)          = {r_ctr.statistic:.3f} (p = {r_ctr.pvalue:.2g})")
+print(f"Spearman ρ(exposure share, click share) = {r_clk.statistic:.3f} (p = {r_clk.pvalue:.2g})")
+""")
+code(r"""
 # Robustness: are category exposure shares stable across the two splits (different days)?
 split_shares = (exp.groupby(["split", "category"]).size().unstack(0)
                 .pipe(lambda d: d / d.sum()).rename(columns=lambda c: f"exposure_share_{c}"))
