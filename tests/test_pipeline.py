@@ -73,6 +73,19 @@ def test_recommenders() -> None:
     assert auc_score(np.array([1, 0]), np.array([1., 1])) == 0.5          # ties count half
     assert np.isnan(auc_score(np.array([1, 1]), np.array([1., 2])))
     assert mrr_score(np.array([0, 1]), np.array([2., 1])) == 0.5
+    from src.recommenders import break_ties, list_diversity, rank_metrics, recall_at_k
+    rng = np.random.default_rng(3)
+    for _ in range(300):                                    # fast path == reference implementations
+        n = rng.integers(2, 60)
+        lab = (rng.random(n) < 0.15).astype(float)
+        if lab.sum() == 0:
+            lab[rng.integers(n)] = 1
+        sc = break_ties(rng.integers(0, 5, n).astype(float), rng)
+        ref = (ndcg_at_k(lab, sc, 10), auc_score(lab, sc), mrr_score(lab, sc), recall_at_k(lab, sc, 10))
+        assert np.allclose(rank_metrics(lab, sc, 10), ref, equal_nan=True), (rank_metrics(lab, sc, 10), ref)
+    ts = np.array([[1, .2, .4], [.2, 1, 0], [.4, 0, 1.]])
+    d = list_diversity(np.array([0, 1, 2]), np.array([0, 0, 1]), ts)
+    assert d["distinct_categories"] == 2 and abs(d["ild"] - (1 - (0.2 + 0.4 + 0) / 3)) < 1e-12
     rel = np.array([1.0, 0.9, 0.1])
     sim = np.array([[1, 1, 0], [1, 1, 0], [0, 0, 1.]])
     assert list(mmr_rerank(rel, sim, 1.0, 3)) == [0, 1, 2]

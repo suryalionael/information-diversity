@@ -59,6 +59,27 @@ def recall_at_k(labels: np.ndarray, scores: np.ndarray, k: int = 10) -> float:
     return float(labels[order][:k].sum() / labels.sum()) if labels.sum() > 0 else float("nan")
 
 
+def rank_metrics(labels: np.ndarray, scores: np.ndarray, k: int = 10) -> tuple[float, float, float, float]:
+    """(nDCG@k, AUC, MRR, recall@k) from a single sort. Requires *unique* scores (use ``break_ties``).
+
+    Equivalent to the individual functions above when scores have no ties (verified in tests).
+    """
+    n = labels.size
+    order = np.argsort(-scores, kind="stable")
+    lab = labels[order]
+    n_pos = lab.sum()
+    if n_pos == 0:
+        return (float("nan"),) * 4
+    pos_rank = np.flatnonzero(lab) + 1                      # 1-based ranks of positives
+    disc = 1.0 / np.log2(np.arange(2, n + 2))
+    dcg = float(disc[pos_rank[pos_rank <= k] - 1].sum())
+    idcg = float(disc[: int(min(n_pos, k))].sum())
+    n_neg = n - n_pos
+    # AUC: for each positive, count negatives ranked below it
+    auc = float(((n - pos_rank) - (n_pos - np.arange(1, n_pos + 1))).sum() / (n_pos * n_neg)) if n_neg else float("nan")
+    return dcg / idcg, auc, float((1.0 / pos_rank).sum() / n_pos), float((pos_rank <= k).sum() / n_pos)
+
+
 def break_ties(scores: np.ndarray, rng: np.random.Generator) -> np.ndarray:
     """Return rank-valued scores (higher = better) with exact ties broken by seeded random jitter.
 
@@ -101,7 +122,9 @@ def mmr_rerank(relevance: np.ndarray, sim: np.ndarray, lam: float, k: int) -> np
 def order_to_scores(top: np.ndarray, base_scores: np.ndarray) -> np.ndarray:
     """Full ranking scores: the re-ranked top-k first, then the rest by base score."""
     n = base_scores.size
-    rest = np.setdiff1d(np.arange(n), top, assume_unique=False)
+    mask = np.ones(n, dtype=bool)
+    mask[top] = False
+    rest = np.flatnonzero(mask)
     rest = rest[np.argsort(-base_scores[rest], kind="stable")]
     full = np.concatenate([top, rest])
     out = np.empty(n)
@@ -197,12 +220,13 @@ def list_diversity(top: np.ndarray, cand_cat: np.ndarray, title_sim: np.ndarray)
     * category_entropy     Shannon entropy (nats) of the list's categories
     * ild                  intra-list diversity: mean pairwise (1 - title cosine similarity)
     """
-    c = np.unique(cand_cat[top], return_counts=True)[1]
+    c = np.bincount(cand_cat[top])
+    c = c[c > 0]
     p = c / c.sum()
     n = top.size
     if n > 1:
-        s = title_sim[np.ix_(top, top)]
-        ild = float((1 - s)[np.triu_indices(n, 1)].mean())
+        sub = title_sim[top][:, top]
+        ild = float(1.0 - (sub.sum() - np.trace(sub)) / (n * (n - 1)))   # symmetric: mean of off-diagonal pairs
     else:
         ild = float("nan")
     return {"distinct_categories": int(c.size), "category_entropy": float(-(p * np.log(p)).sum() + 0.0),
@@ -261,8 +285,8 @@ def evaluate(impressions: pd.DataFrame, ctx: Context, content: dict, cat_counts:
         def measure(model, lam, scores, top):
             d = list_diversity(top, cand_cat, title_sim)
             rec_dom = float(np.mean(cand_cat[top] == dom)) if dom >= 0 else np.nan
-            recs.append((key, user, model, lam, n, labels.sum(), ndcg_at_k(labels, scores, k),
-                         auc_score(labels, scores), mrr_score(labels, scores), recall_at_k(labels, scores, k),
+            nd, au, mr, rc = rank_metrics(labels, scores, k)
+            recs.append((key, user, model, lam, n, labels.sum(), nd, au, mr, rc,
                          d["distinct_categories"], d["category_entropy"], d["ild"], float(tail[top].mean()),
                          rec_dom, hist_dom, pool_dom))
             recommended.setdefault((model, lam), set()).update(cand[top].tolist())

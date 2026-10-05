@@ -208,15 +208,21 @@ SEED = 42
 
 
 def bootstrap_ci(values: np.ndarray, stat=np.mean, n_boot: int = 1000, conf: float = 0.95,
-                 seed: int = SEED) -> tuple[float, float, float]:
-    """(estimate, low, high) percentile bootstrap CI of ``stat`` over ``values`` (NaNs dropped)."""
+                 seed: int = SEED, batch: int = 50) -> tuple[float, float, float]:
+    """(estimate, low, high) percentile bootstrap CI of ``stat`` over ``values`` (NaNs dropped).
+
+    Resamples are drawn in batches so memory stays bounded for large inputs.
+    """
     x = np.asarray(values, dtype=float)
     x = x[~np.isnan(x)]
     if x.size == 0:
         return (float("nan"),) * 3
     rng = np.random.default_rng(seed)
-    idx = rng.integers(0, x.size, size=(n_boot, x.size))
-    boots = np.apply_along_axis(stat, 1, x[idx]) if stat is not np.mean else x[idx].mean(axis=1)
+    boots = np.empty(n_boot)
+    for start in range(0, n_boot, batch):
+        m = min(batch, n_boot - start)
+        sample = x[rng.integers(0, x.size, size=(m, x.size))]
+        boots[start:start + m] = sample.mean(axis=1) if stat is np.mean else np.apply_along_axis(stat, 1, sample)
     a = (1 - conf) / 2
     return float(stat(x)), float(np.quantile(boots, a)), float(np.quantile(boots, 1 - a))
 
