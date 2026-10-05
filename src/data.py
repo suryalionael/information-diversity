@@ -56,7 +56,13 @@ def output_dir() -> Path:
 def split_path(split: str, filename: str) -> Path:
     if split not in SPLIT_DIRS:
         raise ValueError(f"Unknown split {split!r}; expected one of {list(SPLIT_DIRS)}")
-    return data_dir() / SPLIT_DIRS[split] / filename
+    p = data_dir() / SPLIT_DIRS[split] / filename
+    if not p.exists():
+        # Some unzip tools add an extra folder level (e.g. MINDsmall_train/MINDsmall_train/news.tsv).
+        nested = sorted((data_dir() / SPLIT_DIRS[split]).glob(f"*/{filename}"))
+        if len(nested) == 1:
+            return nested[0]
+    return p
 
 
 def check_files(splits: Iterable[str] = ("train", "dev")) -> pd.DataFrame:
