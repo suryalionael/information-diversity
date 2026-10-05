@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 
 from tests.fixture import write_fixture  # noqa: E402
 
-NOTEBOOKS = ["01_big_picture", "02_narrowing", "03_relevance_diversity"]
+NOTEBOOKS = ["01_big_picture", "02_narrowing", "03_relevance_diversity", "04_final_charts"]
 
 
 # --------------------------------------------------------------------------- #
@@ -94,6 +94,9 @@ def run_notebooks(workdir: Path, names: list[str] = NOTEBOOKS) -> Path:
                         "--ExecutePreprocessor.timeout=1800", "--output-dir", str(workdir / "executed"), str(nb)],
                        check=True, env=env, cwd=ROOT / "notebooks", capture_output=True)
         print("executed:", name)
+    subprocess.run([sys.executable, "report/phase1/build_report.py"], check=True, cwd=ROOT, capture_output=True,
+                   env={**env, "REPORT_PDF": str(workdir / "report_fixture.pdf")})
+    print("built report (fixture):", workdir / "report_fixture.pdf")
     return workdir / "out"
 
 
@@ -110,4 +113,5 @@ if __name__ == "__main__":
         with tempfile.TemporaryDirectory() as tmp:
             out = run_notebooks(Path(tmp))
             assert (out / "results" / "headline_metrics.json").exists()
+            assert (Path(tmp) / "report_fixture.pdf").exists()
     print("all tests passed (synthetic fixture)")

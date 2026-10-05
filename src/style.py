@@ -44,7 +44,7 @@ def apply(dpi: int = 110) -> None:
         "xtick.labelsize": 10, "ytick.labelsize": 10, "legend.fontsize": 10,
         "figure.dpi": dpi, "savefig.dpi": 300, "savefig.bbox": "tight", "savefig.pad_inches": 0.04,
         "axes.edgecolor": RULE, "axes.linewidth": 0.8, "axes.labelcolor": INK2, "text.color": INK,
-        "xtick.color": INK2, "ytick.color": INK2, "xtick.major.size": 0, "ytick.major.size": 0,
+        "xtick.color": INK2, "ytick.color": INK2, "xtick.major.size": 0, "ytick.major.size": 0, "xtick.minor.size": 0, "ytick.minor.size": 0,
         "xtick.major.pad": 4, "ytick.major.pad": 4,
         "axes.spines.top": False, "axes.spines.right": False,
         "axes.grid": True, "grid.color": GRID, "grid.linewidth": 0.7, "axes.axisbelow": True,
@@ -81,3 +81,42 @@ def category_label(name: str) -> str:
     """Human-readable category names for judges (MIND uses run-together labels)."""
     return {"foodanddrink": "Food & drink", "tv": "TV", "autos": "Autos",
             "middleeast": "Middle East", "northamerica": "North America"}.get(name, name.capitalize())
+
+
+def place_labels(ax, xs, ys, texts, fontsize: float = 8.5, color: str = INK2, pad_pts: float = 4.0) -> list:
+    """Place point labels without overlaps (greedy).
+
+    For each point, tries offsets (above, below, right, left, diagonals, then farther out) in
+    display space and keeps the first whose box overlaps no earlier label and no data point.
+    """
+    from matplotlib.transforms import Bbox
+    fig = ax.figure
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    pts = ax.transData.transform(list(zip(xs, ys)))
+    scale = fig.dpi / 72.0
+    cands = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1),
+             (0, 2.2), (0, -2.2), (2, 0), (-2, 0)]
+    placed, artists = [], []
+    pt_boxes = [Bbox.from_extents(x - 3 * scale, y - 3 * scale, x + 3 * scale, y + 3 * scale) for x, y in pts]
+    for (px, py), t in zip(pts, texts):
+        best = None
+        for dx, dy in cands:
+            ha = "center" if dx == 0 else ("left" if dx > 0 else "right")
+            va = "center" if dy == 0 else ("bottom" if dy > 0 else "top")
+            off = (dx * pad_pts * 1.4, dy * pad_pts)
+            art = ax.annotate(t, ax.transData.inverted().transform((px, py)), xytext=off, textcoords="offset points",
+                              ha=ha, va=va, fontsize=fontsize, color=color)
+            bb = art.get_window_extent(renderer).expanded(1.04, 1.08)
+            clash = any(bb.overlaps(o) for o in placed) or any(bb.overlaps(o) for o in pt_boxes)
+            inside = ax.get_window_extent(renderer).contains(bb.x0, bb.y0) and ax.get_window_extent(renderer).contains(bb.x1, bb.y1)
+            if not clash and inside:
+                best = (art, bb)
+                break
+            art.remove()
+        if best is None:  # fall back to above
+            art = ax.annotate(t, ax.transData.inverted().transform((px, py)), xytext=(0, pad_pts),
+                              textcoords="offset points", ha="center", va="bottom", fontsize=fontsize, color=color)
+            best = (art, art.get_window_extent(renderer))
+        placed.append(best[1]); artists.append(best[0])
+    return artists

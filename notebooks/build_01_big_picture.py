@@ -264,6 +264,9 @@ r_clk = spearmanr(big["exposure_share"], big["click_share"])
 print(f"n categories = {len(big)}")
 print(f"Spearman ρ(amplification, CTR)          = {r_ctr.statistic:.3f} (p = {r_ctr.pvalue:.2g})")
 print(f"Spearman ρ(exposure share, click share) = {r_clk.statistic:.3f} (p = {r_clk.pvalue:.2g})")
+pd.DataFrame([{"x": "amplification", "y": "ctr", "rho": r_ctr.statistic, "p": r_ctr.pvalue, "n": len(big)},
+              {"x": "exposure_share", "y": "click_share", "rho": r_clk.statistic, "p": r_clk.pvalue, "n": len(big)}]
+             ).to_csv(RESULTS / "category_exposure_engagement.csv", index=False)
 """)
 code(r"""
 # Robustness: are category exposure shares stable across the two splits (different days)?
