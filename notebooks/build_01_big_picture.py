@@ -484,32 +484,65 @@ print("\n".join(f"FACT: {f}" for f in facts))
 md(r"""
 ## 13. Interpretation
 
-*To be written only after this notebook has been executed on the real MIND files and the FACT summary
-above has been reviewed.* Each statement must cite a number printed above and be phrased as
-FACT → INTERPRETATION → LIMITATION. Use neutral language ("exposure amplification", "relative exposure");
-do not describe differences as bias or intent.
+Reviewed against the executed outputs of this notebook (MIND small, train + dev, 8,584,442 impressions).
+Format: **FACT** (printed above) → **INTERPRETATION** → **LIMITATION**.
 
-Questions to answer from the output:
-1. Which categories have amplification clearly above / below 1, and does the ranking survive the
-   exposed-pool baseline and the train-vs-dev split check?
-2. Does exposure track engagement (click share, CTR), or do some categories get high exposure with low CTR?
-3. How concentrated is article-level exposure, and is it similar within single days (timing vs. selection)?
+**1. Exposure is not proportional to the catalogue, and the pattern survives both baselines.**
+- FACT: entertainment is 1.1% of catalogue articles but 5.4% of impressions (amplification 5.08; 4.55 vs. the
+  exposed pool). Music 3.02, TV 2.77, movies 2.75, lifestyle 2.58 (lifestyle: 4.6% of catalogue → 11.8% of impressions).
+  Sports is 29.7% of the catalogue but 11.0% of impressions (0.37; 0.39 vs. pool); weather 0.41, video 0.51, news 0.85.
+- INTERPRETATION: in the observed logs, entertainment/lifestyle-type categories receive roughly 2.5–5× their
+  catalogue presence, while sports, weather and video receive well under half. The ranking is nearly identical
+  under the exposed-pool baseline, so it is not an artefact of history-only articles in `news.tsv`.
+- LIMITATION: amplification describes the output of MSN's whole ecosystem (editorial placement, page layout,
+  recommendation, user navigation). It does not show intent, and "catalogue share" counts articles, not
+  their importance or the number of distinct stories.
+
+**2. Exposure tracks clicks only loosely at category level.**
+- FACT: sports has the highest CTR (5.75%) yet the lowest amplification among large categories; entertainment
+  has one of the lowest CTRs (2.88%) yet the highest amplification. Across the 14 categories with ≥50 articles,
+  Spearman ρ(amplification, CTR) = −0.08 (p = 0.78).
+- INTERPRETATION: category-level exposure is not explained by category-level click-through in these logs —
+  consistent with exposure being shaped by factors beyond observed engagement rates.
+- LIMITATION: n = 14 categories; CTR here is conditional on the logging design (see Limitations: every logged
+  impression contains ≥1 click). Not causal.
+
+**3. Article-level exposure is extremely concentrated.**
+- FACT: among the 22,771 articles shown at least once, Gini = 0.92; the top 1% (228 articles) received 34.7% of
+  impressions and the top 10% received 91.2%; the bottom 50% received 0.4%. 1.95% of articles account for half
+  of all impressions. Within single days, Gini is 0.89–0.93.
+- INTERPRETATION: a very small set of articles captures most of the logged exposure. Because the concentration
+  holds within each day, it is not only an effect of articles being published at different times.
+- LIMITATION: the top-1% articles also have a higher pooled CTR (5.38% vs. 3.31% for other articles with
+  ≥100 impressions), though the article-level rank correlation is weak (ρ = 0.06). Concentration may partly
+  reflect demand; the observational data cannot separate the two.
+
+**4. Most of the catalogue is never shown.**
+- FACT: 34.9% of the 65,238 catalogue articles appear in at least one impression; the remaining 65.1% appear only
+  in users' pre-period click histories.
+- INTERPRETATION: `news.tsv` is mostly a record of older content, not the candidate pool during the logged week.
+- LIMITATION: this is why the exposed-pool baseline is always reported next to catalogue share.
 """)
 
 md(r"""
 ## 14. Limitations
 
+- **Click-conditioned logs.** Every logged impression in MIND small contains at least one click (validation:
+  0 zero-click impressions in train or dev). CTR values are therefore conditional on sessions with engagement
+  and overstate CTR across all MSN page views. Compare CTRs across categories only, never to external benchmarks.
 - **Exposure proxy.** An impression means an article was logged as shown, not that it was seen or read.
-- **Catalogue definition.** `news.tsv` includes articles referenced only in user click histories (older
-  content not necessarily available during the logged days). Amplification vs. the full catalogue therefore
-  mixes availability with selection; the exposed-pool baseline is reported as a check, but it has its own bias
-  (it conditions on being shown).
-- **Short window.** MIND small covers a few days; news has a short shelf-life, so article-level concentration
-  partly reflects publication timing.
-- **Sampled users.** MIND small is a sample of MIND users; impressions are not a census of MSN traffic.
-- **Observed system ≠ algorithm.** Impressions result from MSN's whole ecosystem (editorial placement, layout,
-  recommendation, user navigation). Patterns here are descriptive and do not establish intent or unfairness.
-- **Scope.** US Microsoft News only; not representative of other platforms, countries, or Canadians.
+  The order inside an impression list is not documented as display rank.
+- **Catalogue definition.** 65.1% of `news.tsv` articles appear only in click histories (older content). Amplification
+  vs. the full catalogue mixes availability with selection; the exposed-pool baseline (which conditions on being shown)
+  is reported alongside, and both give the same ranking.
+- **Short window.** Train covers 9–14 Nov 2019 and dev covers 15 Nov 2019; category shares shift between the two
+  (largest: news 27.2% train vs. 23.4% dev), so single-week results may not generalise across time.
+- **Sampled users.** Train and dev are largely different user samples (50,000 each, 5,943 in both).
+- **Small categories.** kids (22 articles), middleeast (2), northamerica (1) and games (1) are too small for
+  meaningful ratios and are excluded from headline claims.
+- **Observed system ≠ algorithm.** Impressions result from MSN's whole ecosystem. Patterns are descriptive and do not
+  establish intent or unfairness.
+- **Scope.** US Microsoft News only; not representative of other platforms, countries, or Canadian audiences.
 - **No demographics.** Users are anonymized; no demographic or geographic user analysis is possible or attempted.
 """)
 
