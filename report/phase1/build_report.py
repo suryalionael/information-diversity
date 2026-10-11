@@ -151,8 +151,8 @@ def robustness_sentence() -> str:
     if r.empty:
         return ""
     same = int(((r["lift"] > 1) & (r["p_one_sided"] < 0.05)).sum())
-    return (f" The tilt above the null held in {same} of {len(r)} alternative specifications (history thresholds, "
-            f"train/dev-only exposure, activity strata).")
+    return (f" The tilt above the baseline held in {same} of {len(r)} alternative specifications (history thresholds of "
+            f"2–20 clicks, exposure from 9–14 Nov or 15 Nov only, groups of similar activity).")
 
 
 def mn(text: str) -> str:
@@ -229,7 +229,7 @@ def page1(c) -> None:
     hi_txt = ("one of the lowest click-through rates" if hi_rank <= 3 else f"a click-through rate ranked {len(main) - hi_rank + 1} of {len(main)}")
     left = f"{lead} {LBL(hi)} had {hi_txt} ({pct(main.loc[hi, 'ctr'], 2)}) and the most amplified exposure."
     right = ("<b>What this is — and isn't.</b> An <i>impression</i> means an article was logged as shown; it is a proxy for "
-             "exposure, not proof of reading. The pattern describes the output of Microsoft News's whole system — editors, page layout, "
+             "exposure, not proof of reading. The pattern describes the output of the whole Microsoft News system — editors, page layout, "
              "recommendation and user navigation — not the recommender alone, and it does not show intent or unfairness.")
     h1 = para(c, left, M, y, col, "body")
     h2 = para(c, right, M + col + 20, y, col, "body")
@@ -393,8 +393,9 @@ def page4(c) -> None:
     names = {"content": "topic-match", "category": "favourite-category", "popularity": "most-clicked"}
     second = base.drop(index=["random", best])["ndcg10"].idxmax()
     overlap = base.loc[second, "ndcg10_ci_high"] >= base.loc[best, "ndcg10_ci_low"]
-    margin = (f", by a narrow margin over {names[second]}: nDCG@10 {base.loc[best, 'ndcg10']:.3f} vs "
-              f"{base.loc[second, 'ndcg10']:.3f}; AUC {base.loc[best, 'auc']:.3f} vs {base.loc[second, 'auc']:.3f}" if overlap else "")
+    margin = (f", by a narrow margin over {names[second]} on ranking accuracy against real clicks: nDCG@10 "
+              f"{base.loc[best, 'ndcg10']:.3f} vs {base.loc[second, 'ndcg10']:.3f}, AUC {base.loc[best, 'auc']:.3f} vs "
+              f"{base.loc[second, 'auc']:.3f}" if overlap else "")
     gain, loss = pick["distinct_categories_rel_change"], pick["ndcg10_rel_change"]
     good = pick["lambda_selected"] < 1 and gain >= 0.2
     if good:
@@ -450,7 +451,7 @@ def page4(c) -> None:
     h1 = para(c, left, M, y, col, "body"); h2 = para(c, right, M + col + 20, y, col, "body")
     y -= max(h1, h2) + 8
     y -= para(c, (f"Simulated strategies — they do not reproduce MSN's recommender. Evaluated on {fmt_int(base.loc[best, 'n_impressions'])} "
-             f"real dev-day impressions (≥{min_c} shown articles): re-ranking only the articles actually shown, scored against real "
+             f"real impressions from the final logged day, 15 Nov (≥{min_c} shown articles): re-ranking only the articles actually shown, scored against real "
              f"clicks (nDCG@10). Models used only information available beforehand (pre-period histories, clicks from the six preceding "
              f"days); {pct(seen)} of test-day candidate articles had any click in those days."), M, y, CW, "note")
     y -= 12
@@ -514,11 +515,12 @@ def page5(c) -> None:
         ("Concentration", "Top-1%/10% shares and the Gini coefficient of impressions per article, also computed day by day."),
         ("Narrowing", "Unbiased Simpson concentration (chance two items share a category), entropy, and a permutation test on "
                       "articles shown but not clicked (logged impressions all contain a click, which favours interests): "
-                      "users' favourite categories are shuffled within groups of similar activity and period to estimate exposure "
-                      "if it ignored history." + robustness_sentence()),
+                      "users' favourite categories are shuffled within groups of similar activity and period to estimate a "
+                      "history-blind baseline." + robustness_sentence()),
         ("Recommenders", "Most clicked (clicks in the six days before the test day), TF-IDF title similarity to the user's history, and favourite-category "
-                         "preference; MMR re-ranking with λ from 1 to 0. Evaluated on the dev day with nDCG@10, AUC, distinct "
-                         "categories, intra-list diversity, coverage and an amplification ratio. No dev clicks used as input."),
+                         "preference; MMR re-ranking with λ from 1 to 0. Evaluated on 15 Nov with nDCG@10 and AUC (ranking accuracy "
+                         "against real clicks), distinct categories, intra-list diversity, coverage and an amplification "
+                         "ratio. No 15 Nov clicks were used as model input."),
     ]
     right = [
         "Observational data: associations, not causes.",
@@ -557,7 +559,7 @@ def page5(c) -> None:
 def build() -> Path:
     if not HL:
         raise SystemExit("outputs/results/headline_metrics.json not found — run the notebooks first")
-    c = canvas.Canvas(str(OUT), pagesize=letter)
+    c = canvas.Canvas(str(OUT), pagesize=letter, initialFontName="SS", initialFontSize=10)
     c.setTitle("Behind the Feed — Does personalized exposure come at the cost of diversity?")
     c.setAuthor("information-diversity project"); c.setSubject("TECHNATION Behind the Feed — Phase 1")
     for page in (page1, page2, page3, page4, page5):

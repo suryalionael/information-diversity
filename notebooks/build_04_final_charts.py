@@ -215,7 +215,7 @@ if have("narrowing_alignment_by_quintile.csv"):
     ax.plot(x, q["null_mean"] * 100, color=S.MUTED, lw=1.5, ls="--")
     ax.plot(x, q["observed_share_own_dom"] * 100, color=S.ORANGE, lw=2.2, marker="o", ms=5)
     ax.text(x[-1] + 0.12, q["observed_share_own_dom"].iat[-1] * 100, "observed", color=S.ORANGE, fontsize=9, va="center", fontweight="semibold")
-    ax.text(x[-1] + 0.12, q["null_mean"].iat[-1] * 100, "if exposure\nignored history", color=S.MUTED, fontsize=8.5, va="center")
+    ax.text(x[-1] + 0.12, q["null_mean"].iat[-1] * 100, "history-blind\nbaseline", color=S.MUTED, fontsize=8.5, va="center")
     ax.set_xticks(x, ["Broadest\nhistory", "", "", "", "Most\nconcentrated"])
     ax.set_xlim(-0.3, len(q) + 0.6)
     from matplotlib.ticker import MultipleLocator

@@ -10,6 +10,23 @@ patterns of online news exposure and recommendation.
 > [`report/phase1/behind-the-feed-phase1.pdf`](report/phase1/behind-the-feed-phase1.pdf). Every number in it is read from
 > `outputs/results/` (see `headline_metrics.json` for provenance: denominator, population, filters, source notebook).
 
+## Key findings (Phase 1)
+
+Full story: **[`report/phase1/behind-the-feed-phase1.pdf`](report/phase1/behind-the-feed-phase1.pdf)** (5 pages).
+Every number below is read from `outputs/results/` (provenance in `headline_metrics.json`).
+
+| # | Finding | Evidence |
+|---|---|---|
+| 1 | Exposure did not mirror the catalogue | Entertainment received 5.08× its catalogue share; sports — 29.7% of articles — 0.37× (`category_metrics.csv`) |
+| 2 | Over-exposure is unrelated to click-through rate | Spearman ρ = −0.08 (p = 0.78) across 14 large categories; sports had the highest CTR (5.75%) (`category_exposure_engagement.csv`) |
+| 3 | A few articles take most of the spotlight | Top 1% of shown articles → 34.7% of impressions; top 10% → 91.2%; Gini 0.92, 0.89–0.93 within single days (`concentration_metrics.csv`) |
+| 4 | Exposure leans modestly toward past favourites | Among shown-but-not-clicked articles: 20.1% vs 18.1% history-blind baseline (1.11×), held in 8/8 robustness checks; 1.07× → 1.18× from broadest to most concentrated histories (`narrowing_*.csv`) |
+| 5 | …but exposure stays broader than clicks | 8.4 vs 5.5 effective categories at the median; history length ρ = 0.03 with exposure concentration (`narrowing_click_vs_exposure.csv`) |
+| 6 | *Simulated:* the most accurate strategy is the narrowest; diversity is cheap to add | Favourite-category ranking: 2.1 categories per top 10 (random order 6.5); MMR λ = 0.5 → +89% categories for −3.2% nDCG@10 (`recommender_*.csv`) |
+
+Observational, US-only, one week; simulated recommenders do not reproduce MSN's system. See the limitations below
+and on page 5 of the report.
+
 ## Research questions
 
 1. **Amplification** — Which news categories receive disproportionately high exposure relative to their
