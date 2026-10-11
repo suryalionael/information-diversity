@@ -1,5 +1,7 @@
 # Information Diversity — Behind the Feed
 
+**Team Signal & Noise:** Lionael Surya and Margil Parekh
+
 **Does personalized information exposure come at the cost of diversity?**
 
 Research repository for the TECHNATION Canada *Behind the Feed* challenge (Phase 1: a ≤5-page PDF visual
