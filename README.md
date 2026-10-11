@@ -6,9 +6,9 @@ Research repository for the TECHNATION Canada *Behind the Feed* challenge (Phase
 story, due 18 October 2026, 11:59 PM ET). We use the public Microsoft News Dataset (MIND) to study
 patterns of online news exposure and recommendation.
 
-> **Status:** Notebook 01 executed on MIND small; Notebooks 02–04 and the PDF builder are implemented and tested
-> on a synthetic fixture, pending execution on the real data. Findings live in `outputs/results/` and the report
-> (`report/phase1/behind-the-feed-phase1.pdf`); none are stated here.
+> **Status:** all four notebooks executed on MIND small; the Phase 1 report is
+> [`report/phase1/behind-the-feed-phase1.pdf`](report/phase1/behind-the-feed-phase1.pdf). Every number in it is read from
+> `outputs/results/` (see `headline_metrics.json` for provenance: denominator, population, filters, source notebook).
 
 ## Research questions
 

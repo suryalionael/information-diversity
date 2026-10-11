@@ -296,8 +296,31 @@ print("\n".join("FACT: " + f for f in facts))
 md(r"""
 ## 11. Interpretation
 
-*Written after review of the executed outputs above (see the FACT summary). Pending first execution on the
-real MIND files.*
+Reviewed against the executed outputs above. **All results are from simulated recommendation strategies** re-ranking
+MSN's logged dev-day candidate lists; they say nothing about how MSN's own recommender behaves.
+
+**1. Relevance ranking of strategies.**
+- FACT (diversity population, 39,581 impressions): nDCG@10 favourite-category 0.201 [0.199, 0.204], topic match 0.197
+  [0.195, 0.200], popularity 0.140, random 0.123. On all 70,938 impressions: 0.361, 0.345, 0.309, 0.287.
+- INTERPRETATION: both personalised strategies beat popularity and random; favourite-category is best.
+- LIMITATION: popularity is handicapped because only 34.2% of dev candidate articles had any train-week click.
+
+**2. The most accurate strategy is the narrowest.**
+- FACT: favourite-category top-10 lists contain 2.10 categories vs 6.51 for a random order of the same candidates, and
+  fill the list with the user's favourite category at 1.79× its share in their history (random order: 0.48×; 73.2% of
+  lists above 1×). Topic match: 5.88 categories, 0.70×.
+- INTERPRETATION: optimising for past behaviour concentrates lists well beyond users' own click mix.
+
+**3. Diversity can be recovered cheaply — up to a point.**
+- FACT: MMR on favourite-category at λ = 0.5 raises distinct categories 2.10 → 3.97 (+89%) for −3.2% nDCG@10 (paired
+  difference −0.0064, user-clustered 95% CI −0.0078 to −0.0051). Topic match at λ = 0.75: +30% for −3.7%; popularity at
+  λ = 0.5: +37% for −3.8%. Below λ = 0.5 the favourite-category nDCG drops by 26%.
+- INTERPRETATION: a moderate diversity weight buys a large gain in breadth for a small relevance cost; pushing further
+  is expensive.
+
+**4. Metrics that turned out uninformative.** Intra-list title diversity is ≈0.99 for every strategy (titles rarely
+share words), and the 10% most-exposed articles fill 92.3% of candidate slots, so long-tail share is small everywhere.
+Neither is used for conclusions.
 """)
 
 md(r"""

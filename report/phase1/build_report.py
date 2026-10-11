@@ -396,16 +396,20 @@ def page4(c) -> None:
     min_c = int(setup["min_candidates"].iat[0]) if setup is not None else "?"
     col = (CW - 20) / 2
     amp_r = base.loc["random", "amp_vs_history_mean"]
-    if amp_c > 1 and amp_t > 1:
+    narrowest = base.drop(index="random")["distinct_categories"].idxmin()
+    if narrowest == best and base.loc[best, "amp_vs_history_mean"] > max(1, amp_r):
+        verdict = "The most accurate strategy was also the narrowest."
+    elif amp_c > 1 and amp_t > 1:
         verdict = "Personalisation concentrates."
     elif max(amp_c, amp_t) > 1:
         verdict = "One strategy concentrates."
     else:
         verdict = "Personalisation did not concentrate lists."
-    left = (f"<b>{verdict}</b> Ranked purely by past behaviour, the favourite-category strategy filled "
-            f"top-10 lists with the user's favourite category at {amp_c:.2f}× its share in their own history; topic-matching "
-            f"did so at {amp_t:.2f}×, and a random order of the same articles at {amp_r:.2f}×. Above 1× means the list is "
-            f"<i>narrower</i> than the user's own past clicks.")
+    left = (f"<b>{verdict}</b> Ranked by past behaviour, the favourite-category strategy put "
+            f"{base.loc['category', 'distinct_categories']:.1f} categories in a top 10 (random order: "
+            f"{base.loc['random', 'distinct_categories']:.1f}) and filled it with the user's favourite category at {amp_c:.2f}× "
+            f"its share in their own history; topic-matching did so at {amp_t:.2f}×, a random order at {amp_r:.2f}×. Above 1× "
+            f"means the list is <i>narrower</i> than the user's own past clicks.")
     if good:
         right = ("<b>Phase 2 direction.</b> The dial is cheap, transparent and explainable. A user-facing “breadth” control — "
                  "with the relevance cost shown openly — is a concrete design we can prototype and test with people, rather "
@@ -420,7 +424,40 @@ def page4(c) -> None:
              f"real dev-day impressions (≥{min_c} shown articles): re-ranking only the articles actually shown, scored against real "
              f"clicks (nDCG@10). Models used only information available beforehand (pre-period histories, train-week clicks); "
              f"{pct(seen)} of dev-day candidate articles had any train-week click."), M, y, CW, "note")
+    y -= 44
+    conclusion(c, y, base, best, pick)
     frame(c, 4)
+
+
+def conclusion(c, y_top: float, base, best, pick) -> None:
+    """Answer to the central question, assembled from Notebook 02 and 03 results."""
+    if "alignment_lift" not in HL:
+        return
+    lift, p_val = v("alignment_lift"), v("alignment_p")
+    he, ee = v("hist_eff_categories_median"), v("exp_eff_categories_median")
+    observed = (f"<b>In the observed feed, a modest lean.</b> Users were shown {lift:.2f}× as much of their past favourite "
+                f"category as if exposure had ignored their history" if lift > 1 and p_val < 0.05 else
+                "<b>In the observed feed, no clear lean</b> toward users' past favourite categories")
+    observed += (f" — yet what they were shown stayed broader than what they clicked ({ee:.1f} vs {he:.1f} effective "
+                 f"categories).")
+    simulated = (f"<b>In our simulation, the default narrows.</b> The most accurate strategy put "
+                 f"{base.loc[best, 'distinct_categories']:.1f} categories in a top 10." if base.loc[best, "distinct_categories"]
+                 < base.loc["random", "distinct_categories"] else
+                 "<b>In our simulation, the most accurate strategy did not narrow lists.</b>")
+    fix = (f"<b>The fix is cheap.</b> A diversity dial recovered {pick['distinct_categories_rel_change']:+.0%} categories for a "
+           f"{abs(pick['ndcg10_rel_change']):.1%} relevance cost." if pick["lambda_selected"] < 1 and
+           pick["distinct_categories_rel_change"] >= 0.2 else
+           "<b>Recovering diversity was not cheap</b> in this simulation.")
+    h = 0
+    p = Paragraph("So — does personalised exposure cost diversity?", ST["cap"]); _, h0 = p.wrap(CW - 24, H)
+    items = [observed, simulated, fix]
+    hs = [Paragraph(t, ST["body"]).wrap((CW - 24 - 2 * 14) / 3, H)[1] for t in items]
+    box_h = h0 + 8 + max(hs) + 20
+    c.setFillColor(TINT); c.roundRect(M, y_top - box_h, CW, box_h, 4, stroke=0, fill=1)
+    p.drawOn(c, M + 12, y_top - 10 - h0)
+    w3 = (CW - 24 - 2 * 14) / 3
+    for i, t in enumerate(items):
+        para(c, t, M + 12 + i * (w3 + 14), y_top - 18 - h0, w3, "body")
 
 
 def page5(c) -> None:
@@ -463,7 +500,9 @@ def page5(c) -> None:
         "Click histories pre-date the logs but have no timestamps and never update during the logged week.",
         "Observed exposure reflects MSN's whole ecosystem — editors, layout, recommendation, navigation — not one algorithm.",
         "Our recommenders are simulations on logged candidate lists; they do not reproduce MSN's proprietary system.",
-        f"Diversity is measured with {len(cat)} broad categories and title words; viewpoint and source diversity are not measured.",
+        f"Diversity is measured with {len(cat)} broad categories; viewpoint and source diversity are not measured. "
+        "Title-word diversity (ILD) was near its maximum for every strategy and is not used for conclusions.",
+        "MIND-small is a sample of MIND users (50,000 per split), not a census of MSN traffic.",
     ]
     yl = y
     for title, text in left:

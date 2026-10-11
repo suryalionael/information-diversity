@@ -460,8 +460,36 @@ print("\n".join("FACT: " + f for f in facts))
 md(r"""
 ## 15. Interpretation
 
-*Written after review of the executed outputs above (see the FACT summary). Pending first execution on the
-real MIND files.*
+Reviewed against the executed outputs above (MIND small, train + dev). **FACT → INTERPRETATION → LIMITATION.**
+
+**1. Logged exposure leans modestly toward each user's past favourite category.**
+- FACT: for 77,216 users with ≥5 history clicks, their historically dominant category made up 20.1% of the articles
+  they were shown but did not click, vs 18.1% under the stratified permutation null (lift 1.11; p = 0.005, the smallest
+  value 200 permutations can give). Counting all shown articles: lift 1.15 (inflated by click-conditioned logging).
+  The not-clicked lift exceeded the null in all 8 alternative specifications (lifts 1.07–1.16).
+- INTERPRETATION: exposure is personalised toward past interests, but by about a tenth, not a multiple.
+- LIMITATION: associative; cannot separate recommendation from users' own navigation, and the dev-only lift is
+  smaller (1.07) than the train-only lift (1.16).
+
+**2. The lean grows with how concentrated past clicks were.**
+- FACT: lift rises monotonically from 1.07 (broadest history quintile) to 1.18 (most concentrated). Spearman ρ between
+  history concentration and not-clicked exposure concentration = 0.16 (95% CI 0.15–0.17).
+- INTERPRETATION: consistent with a feedback loop that matters most for users with the narrowest habits.
+- LIMITATION: the correlation is weak; stable personal interests would produce the same pattern.
+
+**3. Exposure stays broader than clicks.**
+- FACT: at the median, history clicks span 5.5 effective categories and exposure 8.4; 74.9% of eligible users had
+  history more concentrated than exposure; within the logged week, 60.8% of users with ≥5 logged clicks clicked more
+  narrowly than they were shown.
+- INTERPRETATION: whatever narrowing exists in exposure, users' own choices are narrower still.
+
+**4. More activity is not associated with narrower exposure.**
+- FACT: history length vs exposure concentration ρ = 0.03; mean exposure Simpson is 0.137–0.145 across all activity
+  groups. (Distinct categories seen rises with history length, ρ = 0.28, because active users have more impressions.)
+- INTERPRETATION: no evidence that heavier engagement goes with a narrower feed in this week of data.
+
+**5. Category view (descriptive, not null-adjusted).** Users whose history was dominated by autos saw autos in 8.3% of
+their not-clicked exposure vs 3.3% for other users (2.5×); for sports 15.5% vs 12.5%; for news 28.9% vs 24.5%.
 """)
 
 md(r"""

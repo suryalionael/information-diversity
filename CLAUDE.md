@@ -69,6 +69,8 @@ When reporting to the team, separate **FACT** / **INTERPRETATION** / **LIMITATIO
 - Notebook 04 consumes saved results; it does not recompute analyses.
 - Workflow gate: do not start a notebook until the previous one has run end-to-end on real data and its
   results have been reviewed.
+- Status (Phase 1): NB01–04 executed on MIND small (pipeline run on the team's machine; MIND downloads are blocked in the
+  cloud sandbox). Interpretation cells in NB01–03 were written from the executed outputs.
 
 ## Method decisions (fixed a priori — change only with a documented reason)
 

@@ -267,8 +267,8 @@ if have("recommender_frontier.csv", "recommender_metrics.csv"):
     ax.set_xlabel("Relevance → (nDCG@10 against real clicks)")
     ax.set_ylabel("Diversity → (categories in the top 10)")
     ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.17), ncol=3, fontsize=8.5, handletextpad=0.3, columnspacing=1.0)
-    ax.text(0.99, 0.02, "open circle = base ranking (λ = 1)\nthen λ = 0.9, 0.75, 0.5, 0.25, 0.1, 0", transform=ax.transAxes,
-            ha="right", va="bottom", fontsize=8, color=S.INK2)
+    ax.text(0.02, 0.03, "open circle = base ranking (λ = 1)\nthen λ = 0.9, 0.75, 0.5, 0.25, 0.1, 0", transform=ax.transAxes,
+            ha="left", va="bottom", fontsize=8, color=S.INK2)
     S.save(fig, FIG / "fig8_frontier"); plt.show()
 """)
 code(r"""
@@ -283,7 +283,8 @@ if have("recommender_metrics.csv"):
     ax.axhline(1, color=S.INK2, lw=1)
     rv = sm[(sm["lam"] == 1.0) & (sm["model"] == "random")]["amp_vs_history_mean"].iat[0]
     ax.axhline(rv, color=S.MUTED, lw=1.2, ls="--")
-    ax.text(len(bb) - 0.5, rv, f"random order {rv:.2f}×", ha="right", va="bottom", fontsize=8.5, color=S.MUTED)
+    ax.text(0.0, 1.02, f"dashed line: random order of the same articles ({rv:.2f}×)", transform=ax.transAxes,
+            ha="left", va="bottom", fontsize=8, color=S.MUTED)
     for i, v in enumerate(bb["amp_vs_history_mean"]):
         ax.text(i, v + 0.03, f"{v:.2f}×", ha="center", va="bottom", fontsize=9.5)
     ax.set_xticks(np.arange(len(bb)), [names[m] for m in bb.index], fontsize=8.5)
