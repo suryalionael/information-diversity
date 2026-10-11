@@ -65,7 +65,7 @@ ST = {
 
 def para(c, text: str, x: float, y_top: float, width: float, style: str) -> float:
     """Draw a wrapped paragraph with its top at y_top; returns the height used."""
-    p = Paragraph(text, ST[style])
+    p = Paragraph(mn(text), ST[style])
     _, h = p.wrap(width, H)
     p.drawOn(c, x, y_top - h)
     return h
@@ -155,6 +155,12 @@ def robustness_sentence() -> str:
             f"train/dev-only exposure, activity strata).")
 
 
+def mn(text: str) -> str:
+    """Typographic minus for negative numbers."""
+    import re
+    return re.sub(r"(?<![\w])-(?=\d)", "−", text)
+
+
 def pct(x: float, d: int = 0) -> str:
     return f"{x * 100:.{d}f}%"
 
@@ -182,8 +188,8 @@ def page1(c) -> None:
     y = H - M
     y -= kicker(c, "Behind the Feed  ·  Phase 1 visual data story", y) + 6
     y -= para(c, "What gets shown — and what gets overlooked?", M, y, CW, "h1") + 8
-    dek = (f"We traced <b>{millions(v('total_impressions'))}</b> logged article impressions from one week of Microsoft News "
-           f"back to the <b>{fmt_int(v('catalogue_articles'))}</b> articles in the dataset. What readers were shown did not "
+    dek = (f"We traced <b>{millions(v('total_impressions'))}</b> logged article impressions from one week of US Microsoft News "
+           f"(MSN) back to the <b>{fmt_int(v('catalogue_articles'))}</b> articles in the dataset. What users were shown did not "
            f"mirror what was available: <b>{LBL(hi).lower()}</b> received {main.loc[hi, 'amplification']:.1f}× its share of the "
            f"catalogue, while <b>{LBL(lo).lower()}</b> — {pct(main.loc[lo, 'catalogue_share'])} of all articles — received "
            f"{main.loc[lo, 'amplification']:.2f}×.")
@@ -207,23 +213,34 @@ def page1(c) -> None:
 
     col = (CW - 20) / 2
     sp = main.loc[lo]
+    rob = csv("category_baseline_robustness.csv")
+    lowest_both = rob is None or rob["lowest_vs_pool"].iat[0] == lo
+    least = ("the least exposure relative to its catalogue presence" if lowest_both else
+             f"the least exposure relative to the catalogue ({sp['amplification']:.2f}×; {sp['amplification_vs_pool']:.2f}× "
+             f"against articles actually shown, second-lowest on that measure)")
     ctr_rank = main["ctr"].rank(ascending=False)            # 1 = highest CTR
     if ctr_rank[lo] == 1:
         lead = (f"<b>{LBL(lo)} was clicked most often when shown.</b> Its click-through rate — clicks ÷ times shown — was "
-                f"{pct(sp['ctr'], 2)}, the highest of any large category, yet it received the least exposure relative to its "
-                f"catalogue presence.")
+                f"{pct(sp['ctr'], 2)}, the highest of any large category, yet it received {least}.")
     else:
-        lead = (f"<b>{LBL(lo)} was not ignored by readers.</b> Its click-through rate — clicks ÷ times shown — was "
-                f"{pct(sp['ctr'], 2)} (rank {int(ctr_rank[lo])} of {len(main)}), yet it received the least exposure relative "
-                f"to its catalogue presence.")
+        lead = (f"<b>{LBL(lo)} was not ignored by users.</b> Its click-through rate — clicks ÷ times shown — was "
+                f"{pct(sp['ctr'], 2)} (rank {int(ctr_rank[lo])} of {len(main)}), yet it received {least}.")
     hi_rank = int(main["ctr"].rank()[hi])                   # 1 = lowest CTR
     hi_txt = ("one of the lowest click-through rates" if hi_rank <= 3 else f"a click-through rate ranked {len(main) - hi_rank + 1} of {len(main)}")
     left = f"{lead} {LBL(hi)} had {hi_txt} ({pct(main.loc[hi, 'ctr'], 2)}) and the most amplified exposure."
     right = ("<b>What this is — and isn't.</b> An <i>impression</i> means an article was logged as shown; it is a proxy for "
-             "exposure, not proof of reading. The pattern describes the output of MSN's whole system — editors, page layout, "
+             "exposure, not proof of reading. The pattern describes the output of Microsoft News's whole system — editors, page layout, "
              "recommendation and user navigation — not the recommender alone, and it does not show intent or unfairness.")
     h1 = para(c, left, M, y, col, "body")
     h2 = para(c, right, M + col + 20, y, col, "body")
+    y -= max(h1, h2) + 14
+    q = ("<b>Our question: does personalized information exposure come at the cost of diversity?</b> News feeds decide which "
+         "stories millions of people encounter. If what is shown drifts away from what is available, or narrows toward what "
+         "each person already clicks, people see a thinner slice of the news without knowing it. Pages 2–3 measure this in "
+         "the logged feed; page 4 tests, in simulation, whether a feed can be relevant <i>and</i> diverse.")
+    hq = Paragraph(mn(q), ST["body"]).wrap(CW - 24, H)[1]
+    c.setFillColor(TINT); c.roundRect(M, y - hq - 16, CW, hq + 16, 4, stroke=0, fill=1)
+    para(c, q, M + 12, y - 8, CW - 24, "body")
     frame(c, 1)
 
 
@@ -255,7 +272,7 @@ def page2(c) -> None:
     corr = csv("category_exposure_engagement.csv")
     r = corr.iloc[0] if corr is not None else None
     if r is None or r["p"] >= 0.05:
-        h2txt = "Exposure tracks neither catalogue size nor clicks"
+        h2txt = "Over-exposure is unrelated to click-through rate"
     else:
         h2txt = "Exposure only partly follows click rates" if r["rho"] > 0 else "Exposure runs against click rates"
     y -= para(c, h2txt, M, y, CW, "h2") + 6
@@ -295,7 +312,7 @@ def page3(c) -> None:
     lift_all = v("alignment_lift_all_shown")
     sig = lift > 1 and p_val < 0.05
     if sig and lift >= 1.05:
-        head = "Past clicks echo in what users are shown next"
+        head = "Past favourites are over-represented in what users see"
     elif lift <= 0.95:
         head = "Users were shown less of their past favourites than chance"
     else:
@@ -313,14 +330,15 @@ def page3(c) -> None:
     min_hist = HL["narrowing_users_eligible"]["filters"].split("≥")[-1].strip()
     dek = (f"For {fmt_int(v('narrowing_users_eligible'))} users with at least {min_hist} clicks <i>before</i> the logged week, their "
            f"most-clicked category made up <b>{pct(obs, 1)}</b> of the articles they were shown but did not click "
-           f"<i>during</i> it — versus {pct(null, 1)} if exposure had ignored their history (a {lift:.2f}× tilt; "
+           f"<i>during</i> it — versus an estimated {pct(null, 1)} under a history-blind baseline (a {lift:.2f}× tilt; "
            f"{lift_all:.2f}× counting every article shown).{qtxt}")
     y -= para(c, dek, M, y, CW, "dek") + 10
     col = (CW - 18) / 2
     para(c, "Exposure to each user's favourite category", M, y, col, "cap")
     bc = csv("narrowing_alignment_by_category.csv")
     more = bc is not None and (bc["exposure_ratio"] > 1).mean() > 0.5
-    para(c, "Users who mostly clicked a category see more of it" if more else "Past favourites vs. later exposure, by category",
+    para(c, "Past fans of a category see more of it than others" if more else
+         "Past favourites vs. later exposure, by category",
          M + col + 18, y, col, "cap")
     y -= 16
     h1 = image(c, "fig5_alignment", M, y, col, max_h=215)
@@ -332,9 +350,14 @@ def page3(c) -> None:
     y -= para(c, "But exposure stays broader than clicks" if ee > he and share > 0.5 else "Exposure is not broader than clicks",
               M, y, CW, "h2") + 6
     act = csv("narrowing_activity_correlations.csv")
-    arho = act.iloc[0]["rho"] if act is not None else float("nan")
-    if abs(arho) < 0.1:
+    arow = act.iloc[0] if act is not None else None
+    arho = arow["rho"] if arow is not None else float("nan")
+    ci_has_zero = arow is not None and arow["ci_low"] <= 0 <= arow["ci_high"]
+    if abs(arho) < 0.1 and ci_has_zero:
         atxt = "Users with longer click histories were not shown measurably narrower feeds"
+    elif abs(arho) < 0.1:
+        atxt = (f"Users with longer click histories were shown only negligibly "
+                f"{'more' if arho > 0 else 'less'} concentrated feeds")
     elif arho > 0:
         atxt = "Users with longer click histories were shown somewhat more concentrated feeds"
     else:
@@ -367,7 +390,11 @@ def page4(c) -> None:
     base = sm[sm["lam"] == 1.0].set_index("model")
     best = base.drop(index="random")["ndcg10"].idxmax()
     pick = sel.set_index("base").loc[best]
-    names = {"content": "topic-match", "category": "favourite-category", "popularity": "most-clicked-last-week"}
+    names = {"content": "topic-match", "category": "favourite-category", "popularity": "most-clicked"}
+    second = base.drop(index=["random", best])["ndcg10"].idxmax()
+    overlap = base.loc[second, "ndcg10_ci_high"] >= base.loc[best, "ndcg10_ci_low"]
+    margin = (f", by a narrow margin over {names[second]}: nDCG@10 {base.loc[best, 'ndcg10']:.3f} vs "
+              f"{base.loc[second, 'ndcg10']:.3f}; AUC {base.loc[best, 'auc']:.3f} vs {base.loc[second, 'auc']:.3f}" if overlap else "")
     gain, loss = pick["distinct_categories_rel_change"], pick["ndcg10_rel_change"]
     good = pick["lambda_selected"] < 1 and gain >= 0.2
     if good:
@@ -379,7 +406,7 @@ def page4(c) -> None:
     y -= para(c, head, M, y, CW, "h2") + 8
     dek = (f"We built three simple, transparent recommenders and re-ranked each one with <b>Maximal Marginal Relevance</b> "
            f"(MMR), which trades predicted relevance against similarity to articles already picked. For the most accurate "
-           f"strategy ({names[best]}), moving the dial to λ = {pick['lambda_selected']:g} changed the number of categories in "
+           f"strategy ({names[best]}{margin}), moving the dial to λ = {pick['lambda_selected']:g} changed the number of categories in "
            f"a top-10 list by <b>{gain:+.0%}</b> ({pick['distinct_categories_base']:.1f} → "
            f"{pick['distinct_categories_selected']:.1f}) while relevance changed by <b>{loss:+.1%}</b>.")
     y -= para(c, dek, M, y, CW, "dek") + 10
@@ -387,8 +414,8 @@ def page4(c) -> None:
     para(c, "Each dot is one setting of the diversity dial", M, y, wl, "cap")
     para(c, "Do recommenders amplify favourites?", M + wl + CW * 0.02, y, wr, "cap")
     y -= 16
-    h1 = image(c, "fig8_frontier", M, y, wl, max_h=245)
-    h2 = image(c, "fig9_rec_amplification", M + wl + CW * 0.02, y, wr, max_h=245)
+    h1 = image(c, "fig8_frontier", M, y, wl, max_h=228)
+    h2 = image(c, "fig9_rec_amplification", M + wl + CW * 0.02, y, wr, max_h=228)
     y -= max(h1, h2) + 10
     amp_c = base.loc["category", "amp_vs_history_mean"]
     amp_t = base.loc["content", "amp_vs_history_mean"]
@@ -400,31 +427,33 @@ def page4(c) -> None:
     if narrowest == best and base.loc[best, "amp_vs_history_mean"] > max(1, amp_r):
         verdict = "The most accurate strategy was also the narrowest."
     elif amp_c > 1 and amp_t > 1:
-        verdict = "Personalisation concentrates."
+        verdict = "Personalization concentrates."
     elif max(amp_c, amp_t) > 1:
         verdict = "One strategy concentrates."
     else:
-        verdict = "Personalisation did not concentrate lists."
+        verdict = "Personalization did not concentrate lists."
     left = (f"<b>{verdict}</b> Ranked by past behaviour, the favourite-category strategy put "
             f"{base.loc['category', 'distinct_categories']:.1f} categories in a top 10 (random order: "
             f"{base.loc['random', 'distinct_categories']:.1f}) and filled it with the user's favourite category at {amp_c:.2f}× "
             f"its share in their own history; topic-matching did so at {amp_t:.2f}×, a random order at {amp_r:.2f}×. Above 1× "
             f"means the list is <i>narrower</i> than the user's own past clicks.")
     if good:
-        right = ("<b>Phase 2 direction.</b> The dial is cheap, transparent and explainable. A user-facing “breadth” control — "
-                 "with the relevance cost shown openly — is a concrete design we can prototype and test with people, rather "
-                 "than a promise that diversity is free.")
+        right = ("<b>What we recommend.</b> (1) Platforms should publish routine exposure audits like pages 1–3 — catalogue "
+                 "vs. exposure share, concentration, and tilt toward past clicks. (2) In simulation the diversity dial was cheap "
+                 "and explainable, so for Phase 2 we propose prototyping a user-facing “breadth” control that shows its "
+                 "relevance cost openly — and testing it with people.")
     else:
-        right = ("<b>Phase 2 direction.</b> Because extra breadth carried a visible relevance cost here, any “breadth” control "
+        right = ("<b>What we recommend.</b> Platforms should publish routine exposure audits like pages 1–3. Because extra "
+                 "breadth carried a visible relevance cost here, any “breadth” control "
                  "should let people choose the trade-off themselves, with the cost shown openly — a design to prototype and "
                  "test, not a promise that diversity is free.")
     h1 = para(c, left, M, y, col, "body"); h2 = para(c, right, M + col + 20, y, col, "body")
     y -= max(h1, h2) + 8
-    para(c, (f"Simulated strategies — they do not reproduce MSN's recommender. Evaluated on {fmt_int(base.loc[best, 'n_impressions'])} "
+    y -= para(c, (f"Simulated strategies — they do not reproduce MSN's recommender. Evaluated on {fmt_int(base.loc[best, 'n_impressions'])} "
              f"real dev-day impressions (≥{min_c} shown articles): re-ranking only the articles actually shown, scored against real "
-             f"clicks (nDCG@10). Models used only information available beforehand (pre-period histories, train-week clicks); "
-             f"{pct(seen)} of dev-day candidate articles had any train-week click."), M, y, CW, "note")
-    y -= 44
+             f"clicks (nDCG@10). Models used only information available beforehand (pre-period histories, clicks from the six preceding "
+             f"days); {pct(seen)} of test-day candidate articles had any click in those days."), M, y, CW, "note")
+    y -= 12
     conclusion(c, y, base, best, pick)
     frame(c, 4)
 
@@ -435,8 +464,8 @@ def conclusion(c, y_top: float, base, best, pick) -> None:
         return
     lift, p_val = v("alignment_lift"), v("alignment_p")
     he, ee = v("hist_eff_categories_median"), v("exp_eff_categories_median")
-    observed = (f"<b>In the observed feed, a modest lean.</b> Users were shown {lift:.2f}× as much of their past favourite "
-                f"category as if exposure had ignored their history" if lift > 1 and p_val < 0.05 else
+    observed = (f"<b>In the observed feed, a modest lean.</b> Among articles shown but not clicked, users saw "
+                f"{lift:.2f}× as much of their past favourite category as a history-blind baseline predicts" if lift > 1 and p_val < 0.05 else
                 "<b>In the observed feed, no clear lean</b> toward users' past favourite categories")
     observed += (f" — yet what they were shown stayed broader than what they clicked ({ee:.1f} vs {he:.1f} effective "
                  f"categories).")
@@ -444,12 +473,12 @@ def conclusion(c, y_top: float, base, best, pick) -> None:
                  f"{base.loc[best, 'distinct_categories']:.1f} categories in a top 10." if base.loc[best, "distinct_categories"]
                  < base.loc["random", "distinct_categories"] else
                  "<b>In our simulation, the most accurate strategy did not narrow lists.</b>")
-    fix = (f"<b>The fix is cheap.</b> A diversity dial recovered {pick['distinct_categories_rel_change']:+.0%} categories for a "
-           f"{abs(pick['ndcg10_rel_change']):.1%} relevance cost." if pick["lambda_selected"] < 1 and
+    fix = (f"<b>Breadth is cheap to add.</b> In simulation, a diversity dial raised categories per top 10 by "
+           f"{pick['distinct_categories_rel_change']:.0%} for a {abs(pick['ndcg10_rel_change']):.1%} relevance cost." if pick["lambda_selected"] < 1 and
            pick["distinct_categories_rel_change"] >= 0.2 else
            "<b>Recovering diversity was not cheap</b> in this simulation.")
     h = 0
-    p = Paragraph("So — does personalised exposure cost diversity?", ST["cap"]); _, h0 = p.wrap(CW - 24, H)
+    p = Paragraph("So — does personalized exposure cost diversity?", ST["cap"]); _, h0 = p.wrap(CW - 24, H)
     items = [observed, simulated, fix]
     hs = [Paragraph(t, ST["body"]).wrap((CW - 24 - 2 * 14) / 3, H)[1] for t in items]
     box_h = h0 + 8 + max(hs) + 20
@@ -464,7 +493,8 @@ def page5(c) -> None:
     from scipy.stats import spearmanr
     cat = csv("category_metrics.csv", index_col=0)
     main = cat[cat["n_articles"] >= 50]
-    rank_r = spearmanr(main["amplification"], main["amplification_vs_pool"]).statistic
+    rob = csv("category_baseline_robustness.csv")
+    rank_r = rob["rho"].iat[0] if rob is not None else spearmanr(main["amplification"], main["amplification_vs_pool"]).statistic
     hist_only = 1 - v("share_of_catalogue_ever_shown")
     y = H - M
     y -= kicker(c, "Methods & limitations", y) + 6
@@ -472,7 +502,7 @@ def page5(c) -> None:
     col = (CW - 22) / 2
     left = [
         ("Data", f"Microsoft News Dataset (MIND-small), Microsoft Research: {fmt_int(v('catalogue_articles'))} news articles with "
-                 f"categories, and anonymised logs of {fmt_int(v('unique_users'))} users — {fmt_int(v('rows_behaviors_train') + v('rows_behaviors_dev'))} "
+                 f"categories, and anonymized logs of {fmt_int(v('unique_users'))} users — {fmt_int(v('rows_behaviors_train') + v('rows_behaviors_dev'))} "
                  f"impression logs ({period()}) containing {fmt_int(v('total_impressions'))} article impressions and "
                  f"{fmt_int(v('total_clicks'))} clicks."),
         ("Definitions", "<b>Exposure</b> = an article logged as shown in an impression (a proxy, not proof of reading). "
@@ -486,14 +516,14 @@ def page5(c) -> None:
                       "articles shown but not clicked (logged impressions all contain a click, which favours interests): "
                       "users' favourite categories are shuffled within groups of similar activity and period to estimate exposure "
                       "if it ignored history." + robustness_sentence()),
-        ("Recommenders", "Popularity (train-week clicks), TF-IDF title similarity to the user's history, and favourite-category "
+        ("Recommenders", "Most clicked (clicks in the six days before the test day), TF-IDF title similarity to the user's history, and favourite-category "
                          "preference; MMR re-ranking with λ from 1 to 0. Evaluated on the dev day with nDCG@10, AUC, distinct "
                          "categories, intra-list diversity, coverage and an amplification ratio. No dev clicks used as input."),
     ]
     right = [
         "Observational data: associations, not causes.",
         "One week of US Microsoft News; not the whole internet, other platforms, Canada, or other years.",
-        "Users are anonymised; no demographic or location data exist, and none were inferred. Groups are behavioural.",
+        "Users are anonymized; no demographic or location data exist, and none were inferred. Groups are behavioural.",
         "Impressions are an exposure proxy; they do not prove an article was seen or read.",
         "Every logged impression contains at least one click, so click-through rates describe engaged sessions and are "
         "comparable only within this dataset.",

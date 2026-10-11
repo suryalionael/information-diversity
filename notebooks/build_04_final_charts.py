@@ -83,6 +83,10 @@ if have("category_metrics.csv"):
             ax.text(1, y[1] + (0.9 if above else -0.9), pct(r["exposure_share"], 1), va="bottom" if above else "top",
                     ha="center", fontsize=9.5, color=color, fontweight="semibold",
                     bbox=dict(fc="white", ec="none", pad=0.6), zorder=5)
+    big = d["catalogue_share"].idxmax()
+    if big not in hl:
+        ax.text(0, d.loc[big, "catalogue_share"] * 100 + 1.0, f"{LBL(big)} {pct(d.loc[big, 'catalogue_share'], 1)}",
+                ha="center", va="bottom", fontsize=9, color=S.MUTED)
     others = [c for c in d.index if c not in hl]
     top_other = d.loc[others, "click_share"].idxmax()
     ax.text(2.06, d.loc[top_other, "click_share"] * 100, LBL(top_other), va="center", fontsize=9.5, color=S.MUTED)
@@ -92,6 +96,18 @@ if have("category_metrics.csv"):
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
     ax.grid(axis="x", visible=False); ax.spines["left"].set_visible(False)
     S.save(fig, FIG / "fig1_slopegraph"); plt.show()
+""")
+
+code(r"""
+# Robustness summary saved for the report: does the category ranking survive the exposed-pool baseline?
+# (a rank correlation of two columns already validated in Notebook 01 — no new analysis)
+if have("category_metrics.csv"):
+    from scipy.stats import spearmanr
+    r = spearmanr(main["amplification"], main["amplification_vs_pool"])
+    pd.DataFrame([{"x": "amplification (catalogue)", "y": "amplification (exposed pool)", "rho": r.statistic,
+                   "p": r.pvalue, "n": len(main), "lowest_vs_catalogue": main["amplification"].idxmin(),
+                   "lowest_vs_pool": main["amplification_vs_pool"].idxmin()}]).to_csv(RES / "category_baseline_robustness.csv", index=False)
+    print(f"ρ = {r.statistic:.3f}; lowest vs catalogue: {main['amplification'].idxmin()}, vs pool: {main['amplification_vs_pool'].idxmin()}")
 """)
 
 md("## 5. Figure 2 — Exposure amplification by category")
@@ -202,6 +218,8 @@ if have("narrowing_alignment_by_quintile.csv"):
     ax.text(x[-1] + 0.12, q["null_mean"].iat[-1] * 100, "if exposure\nignored history", color=S.MUTED, fontsize=8.5, va="center")
     ax.set_xticks(x, ["Broadest\nhistory", "", "", "", "Most\nconcentrated"])
     ax.set_xlim(-0.3, len(q) + 0.6)
+    from matplotlib.ticker import MultipleLocator
+    ax.yaxis.set_major_locator(MultipleLocator(5))
     ax.yaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:.0f}%"))
     ax.set_ylabel("Share of shown-but-not-clicked articles\nin the user's favourite category")
     ax.set_xlabel("Users grouped by how concentrated\ntheir past clicks were (quintiles)")
@@ -239,11 +257,11 @@ if have("diversity_metrics.csv"):
     a = pd.read_csv(RES / "diversity_metrics.csv")
     fig, ax = plt.subplots(figsize=(HALF, 3.1))
     x = np.arange(len(a))
-    ax.errorbar(x, 1 / a["exp_simpson_mean"], color=S.BLUE, marker="o", lw=2, ms=5)
+    ax.plot(x, a["exp_eff_categories_at_median"], color=S.BLUE, marker="o", lw=2, ms=5)
     ax.set_xticks(x, a["activity_group"].str.replace(" ", "\n", n=1), fontsize=8.5)
-    ax.set_ylabel("Shown: effective number of categories\n(1 ÷ mean Simpson concentration)")
-    ax.set_xlabel("Behavioral activity group (past clicks)")
-    ax.set_ylim(0, (1 / a["exp_simpson_mean"]).max() * 1.25)
+    ax.set_ylabel("Shown: effective number of categories\n(1 ÷ median Simpson concentration)")
+    ax.set_xlabel("Behavioural activity group (past clicks)")
+    ax.set_ylim(0, a["exp_eff_categories_at_median"].max() * 1.25)
     S.save(fig, FIG / "fig7_activity_groups"); plt.show()
 """)
 
@@ -254,7 +272,7 @@ if have("recommender_frontier.csv", "recommender_metrics.csv"):
     sm = pd.read_csv(RES / "recommender_metrics.csv")
     rnd = sm[(sm["model"] == "random") & (sm["lam"] == 1.0)].iloc[0]
     colors = {"content": S.BLUE, "category": S.ORANGE, "popularity": S.AQUA}
-    names = {"content": "Topic match (title words)", "category": "Favourite categories", "popularity": "Most clicked last week"}
+    names = {"content": "Topic match (title words)", "category": "Favourite categories", "popularity": "Most clicked, prior 6 days"}
     fig, ax = plt.subplots(figsize=(FULL * 0.62, 3.6))
     for bname, g in fr.groupby("base"):
         g = g.sort_values("lam", ascending=False)
@@ -275,7 +293,7 @@ code(r"""
 if have("recommender_metrics.csv"):
     sm = pd.read_csv(RES / "recommender_metrics.csv")
     bb = sm[(sm["lam"] == 1.0) & sm["model"].isin(["popularity", "content", "category"])].set_index("model")
-    names = {"content": "Topic match", "category": "Favourite\ncategories", "popularity": "Most clicked\nlast week"}
+    names = {"content": "Topic match", "category": "Favourite\ncategories", "popularity": "Most clicked,\nprior 6 days"}
     bb = bb.sort_values("amp_vs_history_mean")
     fig, ax = plt.subplots(figsize=(FULL * 0.36, 3.6))
     colors = [S.ORANGE if v > 1 else S.BLUE for v in bb["amp_vs_history_mean"]]
@@ -286,7 +304,8 @@ if have("recommender_metrics.csv"):
     ax.text(0.0, 1.02, f"dashed line: random order of the same articles ({rv:.2f}×)", transform=ax.transAxes,
             ha="left", va="bottom", fontsize=8, color=S.MUTED)
     for i, v in enumerate(bb["amp_vs_history_mean"]):
-        ax.text(i, v + 0.03, f"{v:.2f}×", ha="center", va="bottom", fontsize=9.5)
+        ax.text(i, v + 0.03, f"{v:.2f}×", ha="center", va="bottom", fontsize=9.5,
+                bbox=dict(fc="white", ec="none", pad=0.5), zorder=5)
     ax.set_xticks(np.arange(len(bb)), [names[m] for m in bb.index], fontsize=8.5)
     ax.set_ylabel("Favourite-category share in top 10\n÷ share in past clicks")
     ax.grid(axis="x", visible=False); ax.set_ylim(0, bb["amp_vs_history_mean"].max() * 1.25)

@@ -106,7 +106,8 @@ def place_labels(ax, xs, ys, texts, fontsize: float = 8.5, color: str = INK2, pa
             va = "center" if dy == 0 else ("bottom" if dy > 0 else "top")
             off = (dx * pad_pts * 1.4, dy * pad_pts)
             art = ax.annotate(t, ax.transData.inverted().transform((px, py)), xytext=off, textcoords="offset points",
-                              ha=ha, va=va, fontsize=fontsize, color=color)
+                              ha=ha, va=va, fontsize=fontsize, color=color,
+                              bbox=dict(fc="white", ec="none", pad=0.4, alpha=0.85), zorder=4)
             bb = art.get_window_extent(renderer).expanded(1.04, 1.08)
             clash = any(bb.overlaps(o) for o in placed) or any(bb.overlaps(o) for o in pt_boxes)
             inside = ax.get_window_extent(renderer).contains(bb.x0, bb.y0) and ax.get_window_extent(renderer).contains(bb.x1, bb.y1)
