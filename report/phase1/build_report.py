@@ -49,6 +49,9 @@ CW = W - 2 * M               # content width
 INK, INK2, MUTED, RULE = HexColor(S.INK), HexColor(S.INK2), HexColor(S.MUTED), HexColor(S.RULE)
 ORANGE, BLUE, AQUA, TINT = HexColor(S.ORANGE), HexColor(S.BLUE), HexColor(S.AQUA), HexColor("#f6f5f1")
 
+NAVY, ON_DARK, ON_DARK2 = HexColor("#0f1c2e"), HexColor("#ffffff"), HexColor("#c4cdd9")
+HERO_ORANGE = HexColor("#ff7a45")
+
 ST = {
     "kicker": ParagraphStyle("kicker", fontName="SS-Semi", fontSize=8.5, leading=11, textColor=ORANGE),
     "h1": ParagraphStyle("h1", fontName="SS-Semi", fontSize=25, leading=29, textColor=INK),
@@ -58,7 +61,17 @@ ST = {
     "small": ParagraphStyle("small", fontName="SS", fontSize=8.6, leading=11.6, textColor=INK2),
     "cap": ParagraphStyle("cap", fontName="SS-Semi", fontSize=10, leading=13, textColor=INK),
     "note": ParagraphStyle("note", fontName="SS", fontSize=7.8, leading=10.2, textColor=MUTED),
-    "statnum": ParagraphStyle("statnum", fontName="SS-Semi", fontSize=25, leading=27, textColor=ORANGE),
+    "kickw": ParagraphStyle("kickw", fontName="SS-Semi", fontSize=8.8, leading=11, textColor=HERO_ORANGE),
+    "h1w": ParagraphStyle("h1w", fontName="SS-Bold", fontSize=26, leading=29, textColor=ON_DARK),
+    "h2w": ParagraphStyle("h2w", fontName="SS-Bold", fontSize=20, leading=23, textColor=ON_DARK),
+    "dekw": ParagraphStyle("dekw", fontName="SS", fontSize=11, leading=14.6, textColor=ON_DARK2),
+    "bylinew": ParagraphStyle("bylinew", fontName="SS-Semi", fontSize=10, leading=13, textColor=ON_DARK),
+    "hero": ParagraphStyle("hero", fontName="SS-Bold", fontSize=50, leading=52, textColor=HERO_ORANGE),
+    "herolbl": ParagraphStyle("herolbl", fontName="SS", fontSize=9.4, leading=12, textColor=ON_DARK2),
+    "bodyw": ParagraphStyle("bodyw", fontName="SS", fontSize=9.8, leading=13.6, textColor=ON_DARK2),
+    "capw": ParagraphStyle("capw", fontName="SS-Bold", fontSize=12.5, leading=15, textColor=HERO_ORANGE),
+    "sub": ParagraphStyle("sub", fontName="SS-Semi", fontSize=18, leading=22, textColor=INK),
+    "statnum": ParagraphStyle("statnum", fontName="SS-Bold", fontSize=30, leading=32, textColor=ORANGE),
     "statlbl": ParagraphStyle("statlbl", fontName="SS", fontSize=8.8, leading=11.4, textColor=INK2),
 }
 
@@ -71,7 +84,7 @@ def para(c, text: str, x: float, y_top: float, width: float, style: str) -> floa
     return h
 
 
-def image(c, name: str, x: float, y_top: float, width: float, max_h: float | None = None) -> float:
+def image(c, name: str, x: float, y_top: float, width: float, max_h: float | None = None, center: bool = False) -> float:
     """Draw a figure scaled to ``width`` (or to ``max_h``); returns height used. Missing -> pending box."""
     path = FIG / f"{name}.png"
     if not path.exists():
@@ -83,6 +96,8 @@ def image(c, name: str, x: float, y_top: float, width: float, max_h: float | Non
     w, h = width, width * ih / iw
     if max_h and h > max_h:
         h, w = max_h, max_h * iw / ih
+        if center:
+            x += (width - w) / 2
     c.drawImage(img, x, y_top - h, w, h, mask="auto")
     return h
 
@@ -108,6 +123,42 @@ def frame(c, page: int, total: int = 5) -> None:
     c.setFont("SS", 7.6); c.setFillColor(MUTED)
     c.drawString(M, 23, "Signal & Noise  ·  Behind the Feed, Phase 1  |  Data: Microsoft News Dataset (MIND), Microsoft Research, msnews.github.io")
     c.drawRightString(W - M, 23, f"{page} / {total}")
+
+
+def header(c, kick: str, title: str, dek: str, hero: str | None = None, hero_lbl: str = "",
+           byline: str | None = None, big: bool = False) -> float:
+    """Full-bleed dark header band with white headline and optional hero number. Returns y below the band."""
+    tw = CW * (0.66 if hero else 1.0)
+    pieces = [(kick.upper(), "kickw", 7), (title, "h1w" if big else "h2w", 6 if byline else 9)]
+    if byline:
+        pieces.append((byline, "bylinew", 9))
+    pieces.append((dek, "dekw", 0))
+    heights = [Paragraph(mn(t), ST[st]).wrap(tw, H)[1] for t, st, _ in pieces]
+    text_h = sum(heights) + sum(g for _, _, g in pieces)
+    hero_h = 0
+    if hero:
+        hw = CW * 0.30
+        hero_h = Paragraph(hero, ST["hero"]).wrap(hw, H)[1] + 6 + Paragraph(hero_lbl, ST["herolbl"]).wrap(hw, H)[1]
+    band = max(text_h, hero_h) + 2 * 24
+    c.setFillColor(NAVY); c.rect(0, H - band, W, band, stroke=0, fill=1)
+    c.setFillColor(HERO_ORANGE); c.rect(0, H - band, W, 3.2, stroke=0, fill=1)
+    y = H - 24
+    for (t, st, gap), h in zip(pieces, heights):
+        para(c, t, M, y, tw, st); y -= h + gap
+    if hero:
+        xh = M + CW * 0.70
+        c.setStrokeColor(HexColor("#2c3b52")); c.setLineWidth(0.8)
+        c.line(xh - 14, H - band + 20, xh - 14, H - 20)
+        top = H - band / 2 + hero_h / 2
+        hn = para(c, hero, xh, top, hw, "hero")
+        para(c, hero_lbl, xh, top - hn - 6, hw, "herolbl")
+    return H - band - 16
+
+
+def subhead(c, text: str, y: float) -> float:
+    """Section heading with a short orange accent bar."""
+    c.setFillColor(ORANGE); c.rect(M, y - 3, 34, 3.2, stroke=0, fill=1)
+    return para(c, text, M, y - 9, CW, "sub") + 12
 
 
 def kicker(c, text: str, y: float) -> float:
@@ -185,15 +236,12 @@ def page1(c) -> None:
     main = cat[cat["n_articles"] >= 50]
     hi, lo = main["amplification"].idxmax(), main["amplification"].idxmin()
     gain = (main["exposure_share"] - main["catalogue_share"]).idxmax()
-    y = H - M
-    y -= kicker(c, "Signal &amp; Noise  ·  Behind the Feed, Phase 1", y) + 6
-    y -= para(c, "What gets shown — and what gets overlooked?", M, y, CW, "h1") + 4
-    y -= para(c, "Lionael Surya and Margil Parekh", M, y, CW, "statlbl") + 8
     dek = (f"We matched <b>{millions(v('total_impressions'))}</b> logged article impressions from one week of US Microsoft "
            f"News (MSN) against the <b>{fmt_int(v('catalogue_articles'))}</b> articles in the dataset, and the two don't line up. "
            f"<b>{LBL(hi)}</b> got {main.loc[hi, 'amplification']:.1f}× its share of the catalogue; <b>{LBL(lo).lower()}</b>, "
            f"{pct(main.loc[lo, 'catalogue_share'])} of all articles, got {main.loc[lo, 'amplification']:.2f}×.")
-    y -= para(c, dek, M, y, CW, "dek") + 14
+    y = header(c, "Signal &amp; Noise  ·  Behind the Feed, Phase 1", "What gets shown — and what gets overlooked?", dek,
+               byline="Lionael Surya and Margil Parekh", big=True) - 2
 
     tiles = [(pct(main.loc[lo, "catalogue_share"]), f"of articles were {LBL(lo).lower()}…", BLUE),
              (pct(main.loc[lo, "exposure_share"]), f"…but only this share of what users saw", BLUE),
@@ -202,12 +250,12 @@ def page1(c) -> None:
     tw = (CW - 3 * 14) / 4
     hmax = 0
     for i, (n, lbl, col) in enumerate(tiles):
-        hmax = max(hmax, stat(c, M + i * (tw + 14), y, tw, n, lbl, col))
-    y -= hmax + 12
-    rule(c, y); y -= 12
+        c.setFillColor(col); c.rect(M + i * (tw + 14), y - 1, tw, 2.4, stroke=0, fill=1)
+        hmax = max(hmax, stat(c, M + i * (tw + 14), y - 8, tw, n, lbl, col))
+    y -= hmax + 20
 
     y -= para(c, "Each category's share of the catalogue, of what users were shown, and of what they clicked", M, y, CW, "cap") + 4
-    y -= image(c, "fig1_slopegraph", M, y, CW, max_h=245) + 6
+    y -= image(c, "fig1_slopegraph", M, y, CW, max_h=212, center=True) + 6
     y -= para(c, (f"Each line is one of the {len(main)} MIND categories with 50+ articles. Orange means shown more than its catalogue "
                   "share, blue means shown less, and grey lines are the rest."), M, y, CW, "note") + 12
 
@@ -256,13 +304,11 @@ def page2(c) -> None:
     from src.metrics import top_share
     import numpy as np
     n_top1 = top_share(np.ones(int(m["n_items"])), 0.01)["n_items_top"]     # same rounding rule as the analysis
-    y = H - M
-    y -= kicker(c, "Who gets the spotlight?", y) + 6
-    y -= para(c, f"{pct(m['top_1pct_share'], 0)} of all exposure went to 1% of articles", M, y, CW, "h2") + 8
     dek = (f"Of the {fmt_int(m['n_items'])} articles shown at least once, the {fmt_int(n_top1)} most-shown took "
            f"{pct(m['top_1pct_share'], 1)} of all impressions and the top tenth took {pct(m['top_10pct_share'], 1)}, leaving "
            f"the bottom half with {pct(m['bottom_50pct_share'], 1)} between them.")
-    y -= para(c, dek, M, y, CW, "dek") + 10
+    y = header(c, "Who gets the spotlight?", f"{pct(m['top_1pct_share'], 0)} of all exposure went to 1% of articles", dek,
+               hero=f"{m['gini']:.2f}", hero_lbl="Gini coefficient of exposure across articles (1 would mean one article got it all)")
     y -= image(c, "fig4_concentration_bars", M, y, CW) + 4
     stable = daily["gini"].min() >= m["gini"] - 0.05
     tail = ("so this isn't just old and new articles being lumped together." if stable else
@@ -278,12 +324,12 @@ def page2(c) -> None:
         h2txt = "Over-exposure has nothing to do with click-through rate"
     else:
         h2txt = "Exposure only partly follows click rates" if r["rho"] > 0 else "Exposure runs against click rates"
-    y -= para(c, h2txt, M, y, CW, "h2") + 6
+    y -= subhead(c, h2txt, y)
     y -= para(c, ("Left: categories ranked by how much exposure they got relative to their catalogue share. Right: that same "
                   "ratio against how often people clicked each category when it appeared."), M, y, CW, "dek") + 8
     col = (CW - 18) / 2
-    h1 = image(c, "fig2_amplification", M, y, col, max_h=255)
-    h2 = image(c, "fig3_ctr_vs_amplification", M + col + 18, y, col, max_h=255)
+    h1 = image(c, "fig2_amplification", M, y, col, max_h=232)
+    h2 = image(c, "fig3_ctr_vs_amplification", M + col + 18, y, col, max_h=232)
     y -= max(h1, h2) + 8
     if r is not None:
         verdict = "which is no detectable relationship at all" if r["p"] >= 0.05 else "a statistically detectable relationship"
@@ -302,13 +348,11 @@ def page2(c) -> None:
 
 
 def page3(c) -> None:
-    y = H - M
-    y -= kicker(c, "The shrinking window?", y) + 6
     q = csv("narrowing_alignment_by_quintile.csv")
     need = ["alignment_lift", "alignment_observed_share_own_dom", "alignment_null_share_own_dom",
             "narrowing_users_eligible", "exp_eff_categories_median", "hist_eff_categories_median"]
     if q is None or any(k not in HL for k in need):
-        y -= para(c, "Does past clicking narrow what users are shown later?", M, y, CW, "h2") + 10
+        y = header(c, "The shrinking window?", "Does past clicking narrow what users are shown later?", "")
         pending(c, M, y, CW, 200, "Notebook 02 results not found")
         frame(c, 3); return
     lift, obs, null = v("alignment_lift"), v("alignment_observed_share_own_dom"), v("alignment_null_share_own_dom")
@@ -330,13 +374,13 @@ def page3(c) -> None:
         qtxt = f" The tilt moved between {q['lift'].min():.2f}× and {q['lift'].max():.2f}× across groups with no steady trend."
     else:
         qtxt = f" The tilt didn't grow with how concentrated people's past clicks were ({q1:.2f}× for the broadest group)."
-    y -= para(c, head, M, y, CW, "h2") + 8
     min_hist = HL["narrowing_users_eligible"]["filters"].split("≥")[-1].strip()
     dek = (f"We took {fmt_int(v('narrowing_users_eligible'))} users with at least {min_hist} clicks <i>before</i> the logged "
            f"week and looked at the articles they were shown but didn't click <i>during</i> it. Their most-clicked category made "
            f"up <b>{pct(obs, 1)}</b> of those, against roughly {pct(null, 1)} under a history-blind baseline: a {lift:.2f}× tilt "
            f"({lift_all:.2f}× if you count every article shown).{qtxt}")
-    y -= para(c, dek, M, y, CW, "dek") + 10
+    y = header(c, "The shrinking window?", head, dek, hero=f"{lift:.2f}×",
+               hero_lbl="tilt toward each user's past favourite category, in articles shown but not clicked")
     col = (CW - 18) / 2
     para(c, "How much of each feed went to the user's favourite", M, y, col, "cap")
     bc = csv("narrowing_alignment_by_category.csv")
@@ -351,8 +395,8 @@ def page3(c) -> None:
     rule(c, y); y -= 12
     he, ee = v("hist_eff_categories_median"), v("exp_eff_categories_median")
     share = v("share_users_history_more_concentrated_than_exposure")
-    y -= para(c, "Still, the feed stayed wider than the clicks" if ee > he and share > 0.5 else "The feed was no wider than the clicks",
-              M, y, CW, "h2") + 6
+    y -= subhead(c, "Still, the feed stayed wider than the clicks" if ee > he and share > 0.5 else
+                 "The feed was no wider than the clicks", y)
     act = csv("narrowing_activity_correlations.csv")
     arow = act.iloc[0] if act is not None else None
     arho = arow["rho"] if arow is not None else float("nan")
@@ -383,13 +427,11 @@ def page3(c) -> None:
 
 
 def page4(c) -> None:
-    y = H - M
-    y -= kicker(c, "Relevance vs. diversity: a simulation", y) + 6
     sel = csv("recommender_mmr_selected.csv")
     sm = csv("recommender_metrics.csv")
     setup = csv("recommender_setup.csv")
     if sel is None or sm is None:
-        y -= para(c, "Can a feed be relevant and diverse?", M, y, CW, "h2") + 10
+        y = header(c, "Relevance vs. diversity: a simulation", "Can a feed be relevant and diverse?", "")
         pending(c, M, y, CW, 200, "Notebook 03 results not found")
         frame(c, 4); return
     base = sm[sm["lam"] == 1.0].set_index("model")
@@ -409,19 +451,19 @@ def page4(c) -> None:
         head = "Cheap diversity was available, but only a little of it"
     else:
         head = "In this simulation, even a little diversity cost relevance"
-    y -= para(c, head, M, y, CW, "h2") + 8
     dek = (f"We built simple recommenders anyone can inspect, then re-ranked each with <b>Maximal Marginal Relevance</b> "
            f"(MMR), which weighs an article's predicted relevance against how similar it is to what's already in the list. "
-           f"Take the most accurate one ({names[best]}{margin}): turning the dial to λ = {pick['lambda_selected']:g} moved "
+           f"For the most accurate one ({names[best]}), turning the dial to λ = {pick['lambda_selected']:g} moved "
            f"the number of categories in a top-10 list by <b>{gain:+.0%}</b> ({pick['distinct_categories_base']:.1f} → "
            f"{pick['distinct_categories_selected']:.1f}) and relevance by <b>{loss:+.1%}</b>.")
-    y -= para(c, dek, M, y, CW, "dek") + 10
+    y = header(c, "Relevance vs. diversity: a simulation", head, dek, hero=f"{gain:+.0%}",
+               hero_lbl=f"more categories in a top 10 for a {abs(loss):.1%} relevance cost (simulated)")
     wl, wr = CW * 0.62, CW * 0.36
     para(c, "Each dot is one setting of the diversity dial", M, y, wl, "cap")
     para(c, "Do recommenders amplify favourites?", M + wl + CW * 0.02, y, wr, "cap")
     y -= 16
-    h1 = image(c, "fig8_frontier", M, y, wl, max_h=228)
-    h2 = image(c, "fig9_rec_amplification", M + wl + CW * 0.02, y, wr, max_h=228)
+    h1 = image(c, "fig8_frontier", M, y, wl, max_h=182)
+    h2 = image(c, "fig9_rec_amplification", M + wl + CW * 0.02, y, wr, max_h=182)
     y -= max(h1, h2) + 10
     amp_c = base.loc["category", "amp_vs_history_mean"]
     amp_t = base.loc["content", "amp_vs_history_mean"]
@@ -456,11 +498,13 @@ def page4(c) -> None:
                  "clearly isn't free.")
     h1 = para(c, left, M, y, col, "body"); h2 = para(c, right, M + col + 20, y, col, "body")
     y -= max(h1, h2) + 8
+    acc = (f" Favourite-category beat topic-match only narrowly (nDCG@10 {base.loc[best, 'ndcg10']:.3f} vs "
+           f"{base.loc[second, 'ndcg10']:.3f}; AUC {base.loc[best, 'auc']:.3f} vs {base.loc[second, 'auc']:.3f})." if overlap else "")
     y -= para(c, (f"These are simulated strategies and they don't reproduce MSN's recommender. We tested them on "
              f"{fmt_int(base.loc[best, 'n_impressions'])} real impressions from the last logged day, 15 Nov, each with {min_c} or "
              f"more articles shown, re-ranking only what was actually shown and scoring against real clicks (nDCG@10). The models "
              f"only had information from before that day (pre-period histories plus clicks from the six days prior), and just "
-             f"{pct(seen)} of that day's candidate articles had any click in those six days."), M, y, CW, "note")
+             f"{pct(seen)} of that day's candidate articles had any click in those six days.{acc}"), M, y, CW, "note")
     y -= 12
     conclusion(c, y, base, best, pick)
     frame(c, 4)
@@ -486,15 +530,16 @@ def conclusion(c, y_top: float, base, best, pick) -> None:
            pick["distinct_categories_rel_change"] >= 0.2 else
            "<b>Adding breadth wasn't cheap</b> in this simulation.")
     h = 0
-    p = Paragraph("So does personalized exposure cost diversity?", ST["cap"]); _, h0 = p.wrap(CW - 24, H)
-    items = [observed, simulated, fix]
-    hs = [Paragraph(t, ST["body"]).wrap((CW - 24 - 2 * 14) / 3, H)[1] for t in items]
-    box_h = h0 + 8 + max(hs) + 20
-    c.setFillColor(TINT); c.roundRect(M, y_top - box_h, CW, box_h, 4, stroke=0, fill=1)
-    p.drawOn(c, M + 12, y_top - 10 - h0)
-    w3 = (CW - 24 - 2 * 14) / 3
+    p = Paragraph("So does personalized exposure cost diversity?", ST["capw"]); _, h0 = p.wrap(CW - 28, H)
+    items = [t.replace("<b>", '<font color="#ffffff"><b>').replace("</b>", "</b></font>") for t in [observed, simulated, fix]]
+    w3 = (CW - 28 - 2 * 16) / 3
+    hs = [Paragraph(mn(t), ST["bodyw"]).wrap(w3, H)[1] for t in items]
+    box_h = h0 + 10 + max(hs) + 24
+    c.setFillColor(NAVY); c.roundRect(M, y_top - box_h, CW, box_h, 5, stroke=0, fill=1)
+    c.setFillColor(HERO_ORANGE); c.rect(M, y_top - box_h, CW, 3, stroke=0, fill=1)
+    p.drawOn(c, M + 14, y_top - 12 - h0)
     for i, t in enumerate(items):
-        para(c, t, M + 12 + i * (w3 + 14), y_top - 18 - h0, w3, "body")
+        para(c, t, M + 14 + i * (w3 + 16), y_top - 22 - h0, w3, "bodyw")
 
 
 def page5(c) -> None:
@@ -504,9 +549,8 @@ def page5(c) -> None:
     rob = csv("category_baseline_robustness.csv")
     rank_r = rob["rho"].iat[0] if rob is not None else spearmanr(main["amplification"], main["amplification_vs_pool"]).statistic
     hist_only = 1 - v("share_of_catalogue_ever_shown")
-    y = H - M
-    y -= kicker(c, "Methods & limitations", y) + 6
-    y -= para(c, "How we know, and what we can't conclude", M, y, CW, "h2") + 12
+    y = header(c, "Methods &amp; limitations", "How we know, and what we can't conclude",
+               "One public dataset, code anyone can rerun, and the places where the evidence stops.") - 4
     col = (CW - 22) / 2
     left = [
         ("Data", f"Microsoft News Dataset (MIND-small) from Microsoft Research: {fmt_int(v('catalogue_articles'))} news "
@@ -550,7 +594,7 @@ def page5(c) -> None:
     ]
     yl = y
     for title, text in left:
-        yl -= para(c, f"<b>{title}.</b> {text}", M, yl, col, "body") + 7
+        yl -= para(c, f"<b>{title}.</b> {text}", M, yl, col, "body") + 5
     xr = M + col + 22
     c.setFillColor(TINT); c.roundRect(xr - 10, yl - 4, col + 10, y - yl + 10, 4, stroke=0, fill=1)
     yr = y - 4
