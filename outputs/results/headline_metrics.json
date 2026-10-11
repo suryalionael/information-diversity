@@ -8,7 +8,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "rows_news_dev",
@@ -19,7 +19,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "rows_behaviors_train",
@@ -30,7 +30,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "rows_behaviors_dev",
@@ -41,7 +41,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "unique_users",
@@ -52,7 +52,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "catalogue_articles",
@@ -63,7 +63,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "total_impressions",
@@ -74,7 +74,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "unique_exposed_articles",
@@ -85,7 +85,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "total_clicks",
@@ -96,7 +96,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "overall_ctr",
@@ -107,7 +107,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "share_of_catalogue_ever_shown",
@@ -118,7 +118,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "category_amplification_highest",
@@ -129,7 +129,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "exposure_share=0.0541, catalogue_share=0.0107, amplification_vs_pool=4.547",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "category_amplification_lowest",
@@ -140,7 +140,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "",
     "notes": "exposure_share=0.1098, catalogue_share=0.2969, amplification_vs_pool=0.386",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_gini",
@@ -151,7 +151,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_top_1pct_share",
@@ -162,7 +162,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_top_5pct_share",
@@ -173,7 +173,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_top_10pct_share",
@@ -184,7 +184,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_bottom_50pct_share",
@@ -195,7 +195,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_bottom_90pct_share",
@@ -206,7 +206,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_frac_items_for_50pct",
@@ -217,7 +217,7 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
   },
   {
     "metric": "article_exposure_gini_full_catalogue",
@@ -228,6 +228,446 @@
     "source": "notebooks/01_big_picture.ipynb",
     "unit": "proportion",
     "notes": "",
-    "calculated_on": "2026-10-05"
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "narrowing_users_total",
+    "value": 94057,
+    "denominator": "users",
+    "population": "train \u222a dev behaviors.tsv",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "narrowing_users_eligible",
+    "value": 77216,
+    "denominator": "users",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "hist_n \u2265 5",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "narrowing_rho_hist_vs_exposure_simpson",
+    "value": 0.16045498674214623,
+    "denominator": "Spearman rank correlation",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "95% bootstrap CI 0.153\u20130.169; p=0",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_observed_share_own_dom",
+    "value": 0.20138458686736047,
+    "denominator": "mean over users of (exposure in own top history category / all exposure)",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_null_share_own_dom",
+    "value": 0.1807057237445726,
+    "denominator": "same, with top categories shuffled within strata",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "200 permutations within split \u00d7 impressions-group \u00d7 history-quintile",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift",
+    "value": 1.114433913294398,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "one-sided permutation p=0.00498",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_p",
+    "value": 0.004975124378109453,
+    "denominator": "one-sided permutation p-value (null \u2265 observed)",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "p-value",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_all_shown",
+    "value": 1.151737910458045,
+    "denominator": "observed / null, all shown articles (upper bound)",
+    "population": "users with \u22655 pre-period history clicks, exposure = all shown articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "p=0.00498; inflated by click-conditioned logging",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_Q1",
+    "value": 1.0723067489394713,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "history-concentration quintile Q1",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_Q2",
+    "value": 1.0865249166252364,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "history-concentration quintile Q2",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_Q3",
+    "value": 1.0936100367678792,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "history-concentration quintile Q3",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_Q4",
+    "value": 1.1052778193597443,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "history-concentration quintile Q4",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "alignment_lift_Q5",
+    "value": 1.176572739560476,
+    "denominator": "observed / null",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "history-concentration quintile Q5",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "exp_eff_categories_median",
+    "value": 8.436124515694635,
+    "denominator": "1 / median unbiased Simpson of all-shown exposure",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "hist_eff_categories_median",
+    "value": 5.5,
+    "denominator": "1 / median unbiased Simpson of history clicks",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "share_users_history_more_concentrated_than_exposure",
+    "value": 0.7489250932449233,
+    "denominator": "users with hist_simpson > exp_simpson / eligible users",
+    "population": "users with \u22655 pre-period history clicks, exposure = shown-but-not-clicked articles in all logged impressions (train+dev)",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "share_users_logged_clicks_more_concentrated_than_exposure",
+    "value": 0.6084680811290775,
+    "denominator": "users with click_simpson > exp_simpson / users with \u22655 logged clicks",
+    "population": "users with \u22655 logged clicks",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rho_hist_clicks_vs_exposure_simpson",
+    "value": 0.02788454699029955,
+    "denominator": "Spearman rank correlation",
+    "population": "users with \u22651 history click",
+    "filters": "none",
+    "source": "notebooks/02_narrowing.ipynb",
+    "unit": "",
+    "notes": "history length vs exposure concentration",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_popularity_ndcg10",
+    "value": 0.13987734945848493,
+    "denominator": "mean nDCG@10 over impressions",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "95% CI 0.1375\u20130.1421",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_popularity_distinct_categories",
+    "value": 6.720648796139562,
+    "denominator": "mean distinct categories in top 10",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_popularity_amp_vs_history",
+    "value": 0.3738705196726841,
+    "denominator": "mean over lists of rec dominant share / history dominant share",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "users with \u22655 history clicks",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_content_ndcg10",
+    "value": 0.1972949121648401,
+    "denominator": "mean nDCG@10 over impressions",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "95% CI 0.1948\u20130.2000",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_content_distinct_categories",
+    "value": 5.878502311715217,
+    "denominator": "mean distinct categories in top 10",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_content_amp_vs_history",
+    "value": 0.701443133168197,
+    "denominator": "mean over lists of rec dominant share / history dominant share",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "users with \u22655 history clicks",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_category_ndcg10",
+    "value": 0.20137727820364235,
+    "denominator": "mean nDCG@10 over impressions",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "95% CI 0.1989\u20130.2039",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_category_distinct_categories",
+    "value": 2.098355271468634,
+    "denominator": "mean distinct categories in top 10",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_category_amp_vs_history",
+    "value": 1.792306042050965,
+    "denominator": "mean over lists of rec dominant share / history dominant share",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "users with \u22655 history clicks",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_random_ndcg10",
+    "value": 0.12286457504075826,
+    "denominator": "mean nDCG@10 over impressions",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "95% CI 0.1209\u20130.1249",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_random_distinct_categories",
+    "value": 6.511305929612693,
+    "denominator": "mean distinct categories in top 10",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "rec_random_amp_vs_history",
+    "value": 0.48433397833356084,
+    "denominator": "mean over lists of rec dominant share / history dominant share",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "users with \u22655 history clicks",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_category_lambda_selected",
+    "value": 0.5,
+    "denominator": "lowest \u03bb reached from 1.0 before nDCG@10 loss exceeds 5%",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_category_ndcg_rel_change",
+    "value": -0.03173240336680028,
+    "denominator": "nDCG@10 at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_category_distinct_rel_change",
+    "value": 0.8905905725121908,
+    "denominator": "distinct categories at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_content_lambda_selected",
+    "value": 0.75,
+    "denominator": "lowest \u03bb reached from 1.0 before nDCG@10 loss exceeds 5%",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_content_ndcg_rel_change",
+    "value": -0.03674702317530654,
+    "denominator": "nDCG@10 at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_content_distinct_rel_change",
+    "value": 0.2965484340953337,
+    "denominator": "distinct categories at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_popularity_lambda_selected",
+    "value": 0.5,
+    "denominator": "lowest \u03bb reached from 1.0 before nDCG@10 loss exceeds 5%",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_popularity_ndcg_rel_change",
+    "value": -0.03764140386266657,
+    "denominator": "nDCG@10 at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "mmr_popularity_distinct_rel_change",
+    "value": 0.368012480733807,
+    "denominator": "distinct categories at selected \u03bb / base \u2212 1",
+    "population": "dev impressions with \u226520 candidates, users with \u22651 history click (simulated strategies)",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
+  },
+  {
+    "metric": "dev_candidates_with_train_clicks",
+    "value": 0.34159061277705344,
+    "denominator": "dev candidate articles with \u22651 train click / dev candidate articles",
+    "population": "MIND small dev impressions",
+    "filters": "none",
+    "source": "notebooks/03_relevance_diversity.ipynb",
+    "unit": "proportion",
+    "notes": "",
+    "calculated_on": "2026-10-10"
   }
 ]

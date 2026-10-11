@@ -1,0 +1,3 @@
+population,n_users,click_eff_categories_at_median,exp_eff_categories_at_median,share_clicks_more_concentrated,median_diff_simpson,wilcoxon_p
+users with ≥5 logged clicks,21398,6.0,7.850695261679027,0.6084680811290775,0.02699445826075788,0.0
+users with ≥5 history clicks,77216,5.5,8.436124515694635,0.7489250932449233,0.05575566279397794,0.0
