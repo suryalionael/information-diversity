@@ -339,6 +339,9 @@ def core_tests(frame, nc, allc, label, n_perm=100):
             "p_all_shown": b_["p_one_sided"]}
 
 rob = [core_tests(elig_nc, ncounts, ecounts, f"primary: ≥{MIN_HIST} history clicks, train+dev, not-clicked exposure")]
+# primary row: reuse the headline (200-permutation) results so the two can never disagree
+rob[0].update({"observed_share_own_dom": al["observed_mean"], "null_mean": al["null_mean"], "lift": al["lift"],
+               "p_one_sided": al["p_one_sided"], "lift_all_shown": al_all["lift"], "p_all_shown": al_all["p_one_sided"]})
 for t in SENS_THRESHOLDS:
     if t != MIN_HIST:
         rob.append(core_tests(users[(users["hist_n"] >= t) & (users["nc_n"] > 0)], ncounts, ecounts, f"≥{t} history clicks"))
