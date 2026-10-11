@@ -1,0 +1,4 @@
+train: news.tsv column 'abstract' missing in 2,666 rows (5.2%)
+train: behaviors.tsv column 'history' missing in 3,238 rows (2.1%)
+dev: news.tsv column 'abstract' missing in 2,021 rows (4.8%)
+dev: behaviors.tsv column 'history' missing in 2,214 rows (3.0%)

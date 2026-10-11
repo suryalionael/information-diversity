@@ -1,0 +1,60 @@
+{
+  "news":{
+    "train":{
+      "rows":"51282",
+      "columns_ok":"True",
+      "unique_news_ids":"51282",
+      "duplicate_news_ids":"0",
+      "missing_by_column":"{'news_id': 0, 'category': 0, 'subcategory': 0, 'title': 0, 'abstract': 2666, 'url': 0, 'title_entities': 0, 'abstract_entities': 0}",
+      "n_categories":"17",
+      "n_subcategories":"264",
+      "bad_id_format":"0"
+    },
+    "dev":{
+      "rows":"42416",
+      "columns_ok":"True",
+      "unique_news_ids":"42416",
+      "duplicate_news_ids":"0",
+      "missing_by_column":"{'news_id': 0, 'category': 0, 'subcategory': 0, 'title': 0, 'abstract': 2021, 'url': 0, 'title_entities': 0, 'abstract_entities': 0}",
+      "n_categories":"17",
+      "n_subcategories":"257",
+      "bad_id_format":"0"
+    }
+  },
+  "behaviors":{
+    "train":{
+      "rows":"156965",
+      "columns_ok":"True",
+      "duplicate_impression_ids":"0",
+      "unique_users":"50000",
+      "missing_by_column":"{'impression_id': 0, 'user_id': 0, 'time': 0, 'history': 3238, 'impressions': 0}",
+      "time_min":"2019-11-09 00:00:19",
+      "time_max":"2019-11-14 23:59:13",
+      "unparseable_labels":"0",
+      "labels_not_0_or_1":"0",
+      "exposure_records":"5843444",
+      "impressions_with_no_articles":"0",
+      "articles_per_impression":"{'count': 156965.0, 'mean': 37.23, 'std': 38.59, 'min': 2.0, '25%': 10.0, '50%': 24.0, '75%': 51.0, 'max': 299.0}",
+      "impressions_with_zero_clicks":"0",
+      "impressions_with_2plus_clicks":"43077",
+      "duplicate_article_within_impression":"0"
+    },
+    "dev":{
+      "rows":"73152",
+      "columns_ok":"True",
+      "duplicate_impression_ids":"0",
+      "unique_users":"50000",
+      "missing_by_column":"{'impression_id': 0, 'user_id': 0, 'time': 0, 'history': 2214, 'impressions': 0}",
+      "time_min":"2019-11-15 00:00:01",
+      "time_max":"2019-11-15 23:58:03",
+      "unparseable_labels":"0",
+      "labels_not_0_or_1":"0",
+      "exposure_records":"2740998",
+      "impressions_with_no_articles":"0",
+      "articles_per_impression":"{'count': 73152.0, 'mean': 37.47, 'std': 39.54, 'min': 2.0, '25%': 10.0, '50%': 23.0, '75%': 51.0, 'max': 295.0}",
+      "impressions_with_zero_clicks":"0",
+      "impressions_with_2plus_clicks":"21085",
+      "duplicate_article_within_impression":"0"
+    }
+  }
+}
